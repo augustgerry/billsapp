@@ -78,18 +78,22 @@ returns text
 language plpgsql
 as $$
 declare
-  alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  code text;
+  v_alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v_code text;
   i int;
 begin
   loop
-    code := '';
+    v_code := '';
     for i in 1..5 loop
-      code := code || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+      v_code := v_code
+        || substr(v_alphabet, 1 + floor(random() * length(v_alphabet))::int, 1);
     end loop;
-    exit when not exists (select 1 from public.groups g where g.code = code);
+    -- qualify the column so it can't clash with the v_code variable
+    exit when not exists (
+      select 1 from public.groups g where g.code = v_code
+    );
   end loop;
-  return code;
+  return v_code;
 end;
 $$;
 
