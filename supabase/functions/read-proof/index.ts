@@ -13,15 +13,15 @@
  *   { "amount": null, "refused": true }             // safety refusal
  *   { "error": string }                             // 4xx / 5xx
  *
- * Model: defaults to `claude-opus-5` (per the claude-api skill's default).
- * Override with the `ANTHROPIC_MODEL` secret — the prototype used Sonnet, so
- * `claude-sonnet-5` is a reasonable cost trade for this narrow task. See
- * open question #5 in docs/ARCHITECTURE.md.
+ * Model: defaults to `claude-sonnet-5`. This task is "read one number off a
+ * receipt" — no heavy reasoning — and it runs many times per household per
+ * month, so cost is minimised deliberately. Override with the `ANTHROPIC_MODEL`
+ * secret. See open question #5 in docs/ARCHITECTURE.md.
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.124.0';
 
-const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-5';
+const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-5';
 
 const PROMPT =
   'Ini screenshot bukti transfer bank / e-wallet Indonesia. Baca nominal yang ' +

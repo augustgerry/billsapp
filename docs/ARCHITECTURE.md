@@ -55,6 +55,7 @@ docs/
 | tombol "Tandai valid" / "Tandai sudah bayar" | `applySelfDeclare` |
 | `[data-confirmpay]` | `applyConfirm` |
 | `[data-rejectpay]` | `applyReject` |
+| "Upload ulang" (baru) | `applyReupload` + `canReupload` |
 | `[data-payoff]` (lunasi dipercepat) | `applyEarlyPayoff` + `earlyPayoffInfo` |
 | "Edit nominal" | `applyEditNominal` + `canEditNominal` |
 | loop agregasi di `renderGroup` | `monthlyOverview` |
@@ -66,7 +67,7 @@ docs/
 Semua fungsi `apply*` **murni**: nge-clone input, balikin state baru
 (`{ bill, record }`). Yang manggil yang nyimpen ke Supabase.
 
-### 2 perubahan sengaja dari prototipe
+### 3 perubahan sengaja dari prototipe
 
 1. **Guard idempotensi cicilan** (`MonthRecord.installmentAdvanced`).
    Di prototipe, `maybeAdvanceInstallment` bisa naikin `paidCount` lebih dari
@@ -79,19 +80,25 @@ Semua fungsi `apply*` **murni**: nge-clone input, balikin state baru
    biar PJ ada konteks pas mau konfirmasi pembayaran `awaiting`. → **open
    question #4**.
 
-## Pertanyaan terbuka — default yang dipakai sekarang
+3. **Jalur "Upload ulang" dari `review`** (`applyReupload` + `canReupload`).
+   Di prototipe, pembayaran `review` cuma bisa maju (self-declare) — nggak ada
+   cara balik buat foto ulang. Sekarang pengupload bisa reset ke `unpaid` +
+   hapus bukti lama biar coba foto yang lebih jelas. Beda sama "Tandai sudah
+   bayar" (`applySelfDeclare`) yang tetap lanjut ke `awaiting`. → **open
+   question #3**.
 
-Ini yang gue tanyain di ringkasan pemahaman dan belum dikonfirmasi. Gue jalan
-pakai default di bawah; gampang diubah nanti.
+## Pertanyaan terbuka — status
 
-| # | Isu | Default yang dipakai |
+Poin 1, 2, 4, 6 dikonfirmasi user (2026-09-09). Poin 3 & 5 dikoreksi.
+
+| # | Isu | Keputusan |
 |---|---|---|
-| 1 | `paidCount` nggak pernah turun kalau pembayaran `awaiting` ditolak setelah cicilan sempat "lunas" bulan itu | Ikut prototipe: **tidak** decrement. Guard cuma nyegah double-*increment*. |
-| 2 | PJ nggak bisa dorong pembayaran split dari `review` (cuma pengupload) | Ikut prototipe: hanya pengupload. `canSelfDeclare` mencerminkan ini. |
-| 3 | `review` nggak punya jalur "Tolak" (cuma `awaiting`) | Ikut prototipe: dari `review` cuma bisa maju (self-declare). |
-| 4 | Simpan hasil OCR + flag match | **Ya**, disimpan (`amount`, `ocrMatched`). |
-| 5 | Model OCR | Edge Function default `claude-opus-5` (aturan skill). Prototipe pakai Sonnet — set secret `ANTHROPIC_MODEL=claude-sonnet-5` kalau mau lebih murah. Toleransi match tetap `< Rp1.000`. |
-| 6 | Cicilan+split: `responsible` selalu ∈ `splitMembers` | Dikonfirmasi benar. Constraint DB `bills_split_has_members` (≥2). |
+| 1 | `paidCount` nggak pernah turun kalau pembayaran `awaiting` ditolak setelah cicilan sempat "lunas" bulan itu | ✅ Ikut prototipe: **tidak** decrement. Guard cuma nyegah double-*increment*. |
+| 2 | PJ nggak bisa dorong pembayaran split dari `review` (cuma pengupload) | ✅ Ikut prototipe: hanya pengupload. `canSelfDeclare` mencerminkan ini. |
+| 3 | `review` nggak punya jalur "Tolak" | ✏️ **Dibenerin.** Tambah "Upload ulang" (`applyReupload`): reset ke `unpaid` + hapus bukti lama, buat foto ulang. Beda dari "Tandai sudah bayar" (→ `awaiting`). |
+| 4 | Simpan hasil OCR + flag match | ✅ **Ya**, disimpan (`amount`, `ocrMatched`). |
+| 5 | Model OCR | ✏️ Default **`claude-sonnet-5`** (bukan opus) — cuma baca nominal, dipanggil berkali-kali/bulan, biaya diminimalin. Override via secret `ANTHROPIC_MODEL`. Toleransi match tetap `< Rp1.000`. |
+| 6 | Cicilan+split: `responsible` selalu ∈ `splitMembers` | ✅ Benar. Constraint DB `bills_split_has_members` (≥2). |
 
 ## Data model: prototipe blob → tabel Supabase
 

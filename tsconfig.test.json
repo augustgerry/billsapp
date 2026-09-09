@@ -4,6 +4,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src/domain/**/*.ts", "src/types/**/*.ts"],
+  "include": ["src/**/*.test.ts"],
   "exclude": ["node_modules", ".dev"]
 }

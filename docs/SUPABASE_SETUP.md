@@ -68,8 +68,8 @@ Set key Anthropic sebagai **secret** (bukan di `.env` app):
 
 ```bash
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-# opsional, default claude-opus-5:
-supabase secrets set ANTHROPIC_MODEL=claude-sonnet-5
+# opsional — default udah claude-sonnet-5:
+supabase secrets set ANTHROPIC_MODEL=<model lain>
 ```
 
 Deploy:

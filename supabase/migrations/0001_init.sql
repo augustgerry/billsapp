@@ -320,6 +320,25 @@ create trigger payments_touch_updated_at
   for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- recent_groups   (per-user "Lanjutkan" list — hide != delete the group)
+-- ---------------------------------------------------------------------------
+
+create table public.recent_groups (
+  user_id   uuid not null references auth.users (id) on delete cascade,
+  group_id  uuid not null references public.groups (id) on delete cascade,
+  opened_at timestamptz not null default now(),
+  hidden    boolean not null default false,
+  primary key (user_id, group_id)
+);
+
+alter table public.recent_groups enable row level security;
+
+create policy "recent_groups: own rows"
+  on public.recent_groups for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
 -- create_group RPC  (atomic group + members insert)
 -- ---------------------------------------------------------------------------
 
@@ -382,6 +401,79 @@ revoke all on function public.create_group(text, text, jsonb) from public;
 grant execute on function public.create_group(text, text, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- get_group_for_join RPC
+-- Resolve a join code to a group + the caller's membership. Returns the group
+-- name even to non-members (they have the code) so the UI can say "email kamu
+-- belum terdaftar sebagai anggota grup <name>". Raises if the code is unknown.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.get_group_for_join(p_code text)
+returns table (group_id uuid, name text, member_name text)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_group public.groups;
+begin
+  select * into v_group from public.groups g
+    where upper(g.code) = upper(trim(p_code));
+  if not found then
+    raise exception 'Kode grup tidak ditemukan';
+  end if;
+
+  return query
+    select v_group.id,
+           v_group.name,
+           (select m.name from public.group_members m
+              where m.group_id = v_group.id
+                and lower(m.email) = public.current_email()
+              limit 1);
+end;
+$$;
+
+revoke all on function public.get_group_for_join(text) from public;
+grant execute on function public.get_group_for_join(text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- duplicate_group RPC
+-- "Duplikat" from Home: new group, same name + " (Salinan)", same members,
+-- NO bills / history (matches the prototype). Caller must be a member.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.duplicate_group(p_group_id uuid)
+returns public.groups
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_src   public.groups;
+  v_group public.groups;
+begin
+  if not public.is_group_member(p_group_id) then
+    raise exception 'Kamu bukan anggota grup ini';
+  end if;
+
+  select * into v_src from public.groups where id = p_group_id;
+
+  insert into public.groups (code, name, pin, created_by)
+  values (public.gen_group_code(), v_src.name || ' (Salinan)', v_src.pin, auth.uid())
+  returning * into v_group;
+
+  insert into public.group_members (group_id, name, email)
+  select v_group.id, m.name, m.email
+  from public.group_members m
+  where m.group_id = p_group_id;
+
+  return v_group;
+end;
+$$;
+
+revoke all on function public.duplicate_group(uuid) from public;
+grant execute on function public.duplicate_group(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Storage: proof-of-transfer images
 -- Path convention: <group_id>/<bill_id>/<month>/<member>.jpg
 -- ---------------------------------------------------------------------------
@@ -406,6 +498,14 @@ create policy "proofs: members write"
 
 create policy "proofs: members update"
   on storage.objects for update
+  using (
+    bucket_id = 'proofs'
+    and is_group_member(((storage.foldername(name))[1])::uuid)
+  );
+
+-- needed for "Upload ulang" (replace a blurry proof) and "Tolak"
+create policy "proofs: members delete"
+  on storage.objects for delete
   using (
     bucket_id = 'proofs'
     and is_group_member(((storage.foldername(name))[1])::uuid)

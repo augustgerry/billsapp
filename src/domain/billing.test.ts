@@ -7,12 +7,14 @@ import {
   applyEditNominal,
   applyProofUpload,
   applyReject,
+  applyReupload,
   applySelfDeclare,
   billAmountForMonth,
   billBadge,
   buildReminderText,
   canConfirmPayment,
   canEditNominal,
+  canReupload,
   canSelfDeclare,
   currentInstallmentNumber,
   earlyPayoffInfo,
@@ -104,6 +106,7 @@ function cicilanSplit(over: Partial<Bill> = {}): Bill {
 
 function group(bills: Bill[], monthly: Group['monthly'] = {}): Group {
   return {
+    id: 'g1',
     code: 'ABC12',
     name: 'Rumah Kita',
     pin: '123456',
@@ -344,6 +347,34 @@ test('applyReject: awaiting -> unpaid and drops the proof', () => {
   });
   // input untouched
   assert.equal(rec.payments.Nina.status, 'awaiting');
+});
+
+test('applyReupload: review -> unpaid, proof dropped, ready to retry', () => {
+  const rec: MonthRecord = {
+    amount: null,
+    payments: {
+      Kaka: {
+        status: 'review',
+        amount: 95000,
+        proofImage: 'blurry.jpg',
+        uploadedAt: 7,
+        ocrMatched: false,
+      },
+    },
+  };
+  const out = applyReupload(rec, 'Kaka');
+  assert.deepEqual(out.payments.Kaka, {
+    status: 'unpaid',
+    amount: null,
+    proofImage: null,
+    uploadedAt: null,
+  });
+  assert.equal(rec.payments.Kaka.status, 'review'); // input untouched
+});
+
+test('canReupload: only the member whose payment it is', () => {
+  assert.equal(canReupload('Kaka', 'Kaka'), true);
+  assert.equal(canReupload('Gerry', 'Kaka'), false);
 });
 
 // --- early payoff ----------------------------------------------------

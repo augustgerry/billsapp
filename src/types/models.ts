@@ -53,6 +53,8 @@ export type MemberName = string;
 export type GroupCode = string;
 
 export interface Group {
+  /** Supabase `groups.id` (uuid). The persistence key; `code` is the human one. */
+  id: string;
   code: GroupCode;
   name: string;
   /** 6-digit string. Shared by all members to enter the group (not per-account). */
@@ -60,8 +62,8 @@ export interface Group {
   members: Member[];
   bills: Bill[];
   /**
-   * Per-month payment ledger: `monthly[YYYY-MM][billId]`.
-   * Created lazily (see `getMonthRecord` in the domain layer).
+   * Per-month payment ledger: `monthly[YYYY-MM][billId]`. Loaded on demand by
+   * the repository layer; `readMonthRecord` treats a missing month as empty.
    */
   monthly: Record<MonthKey, Record<BillId, MonthRecord>>;
   createdAt: number;
@@ -152,11 +154,15 @@ export type MonthKey = string;
  *     └─ upload proof, OCR matches expected      -> paid
  *     └─ upload proof, OCR mismatch              -> review
  *   review
+ *     └─ uploader "Upload ulang"                 -> unpaid (proof dropped, retry)
  *     └─ single: uploader (= PJ) "Tandai valid"  -> paid
  *     └─ split:  uploader "Tandai sudah bayar"   -> awaiting
  *   awaiting  (split only)
  *     └─ PJ "Konfirmasi lunas"                   -> paid
  *     └─ PJ "Tolak"                              -> unpaid (proof dropped)
+ *
+ * The "Upload ulang" path is an addition to the prototype — see
+ * docs/ARCHITECTURE.md open question #3.
  */
 export type PaymentStatus = 'unpaid' | 'paid' | 'review' | 'awaiting';
 

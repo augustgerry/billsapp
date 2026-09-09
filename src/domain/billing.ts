@@ -190,6 +190,11 @@ export function canSelfDeclare(
   return bill.type === 'split' ? user === member : user === bill.responsible;
 }
 
+/** The uploader may retry their own `review` payment ("Upload ulang"). */
+export function canReupload(user: MemberName, member: MemberName): boolean {
+  return user === member;
+}
+
 // ---------------------------------------------------------------------------
 // Events (pure: clone in, next-state out)
 // ---------------------------------------------------------------------------
@@ -250,8 +255,9 @@ export function applyProofUpload(
 }
 
 /**
- * Uploader acts on their own `review` payment ("Tandai valid" / "Tandai sudah
- * bayar"):
+ * Uploader confirms their own `review` payment is genuine ("Tandai valid" /
+ * "Tandai sudah bayar") — one of the two exits from `review` (the other is
+ * `applyReupload`):
  *  - split  -> `awaiting` (needs PJ confirmation)
  *  - single -> `paid` (uploader is the PJ, self-attests)
  * Existing amount / proof / timestamp are preserved.
@@ -298,6 +304,25 @@ export function applyConfirm(
  * `paidCount` — see open question #1 in docs/ARCHITECTURE.md.
  */
 export function applyReject(
+  record: MonthRecord,
+  member: MemberName,
+): MonthRecord {
+  const nextRecord = cloneRecord(record);
+  nextRecord.payments[member] = emptyPayment();
+  return nextRecord;
+}
+
+/**
+ * Uploader retries their own `review` payment ("Upload ulang") -> `unpaid`,
+ * old proof dropped, so they can submit a clearer photo. This is NOT in the
+ * prototype — it closes the gap where a `review` payment had no way back except
+ * self-declaring into `awaiting`. Distinct from `applySelfDeclare`, which is the
+ * "yes this really is my payment" path.
+ *
+ * The caller is responsible for deleting the old proof object from storage
+ * (the returned record no longer references it).
+ */
+export function applyReupload(
   record: MonthRecord,
   member: MemberName,
 ): MonthRecord {
