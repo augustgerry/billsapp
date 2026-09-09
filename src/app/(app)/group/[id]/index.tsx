@@ -1,49 +1,53 @@
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { BillCard } from '@/features/bills/bill-card';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
 import { useTheme } from '@/hooks/use-theme';
-import { billBadge, monthlyOverview, readMonthRecord } from '@/domain/billing';
-import { formatRp } from '@/domain/money';
+import { monthlyOverview, readMonthRecord } from '@/domain/billing';
 import { monthKey, monthLabel } from '@/domain/dates';
+import { formatRp } from '@/domain/money';
+import { updateBillEstimate } from '@/lib/bills-repository';
 import { fetchGroup } from '@/lib/groups-repository';
 import { loadMonth } from '@/lib/payments-repository';
 import type { Group } from '@/types/models';
 
-/**
- * Dashboard — SKELETON. Shows the group is wired end-to-end (fetch + domain
- * selectors). The real tabbed dashboard (brief §6) is the next screen.
- */
+type Tab = 'tagihan' | 'ringkasan';
+
 export default function GroupScreen() {
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const { email } = useAuth();
   const c = useTheme();
+
   const [group, setGroup] = useState<Group | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('tagihan');
+  const month = monthKey();
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const g = await fetchGroup(id);
-        g.monthly[monthKey()] = await loadMonth(id, monthKey());
-        if (active) setGroup(g);
-      } catch (e) {
-        if (active)
-          setError(e instanceof Error ? e.message : 'Gagal memuat grup');
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const g = await fetchGroup(id);
+      g.monthly[month] = await loadMonth(id, month);
+      setGroup(g);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memuat grup');
+    }
+  }, [id, month]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (!isGroupUnlocked(id)) {
     return (
@@ -53,88 +57,136 @@ export default function GroupScreen() {
     );
   }
 
-  if (error) {
+  if (error && !group) {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
         <ThemedText themeColor="danger">{error}</ThemedText>
+        <Button label="Coba lagi" variant="secondary" onPress={() => void load()} />
       </Screen>
     );
   }
-
   if (!group) return <LoadingScreen />;
 
   const me = group.members.find(
     (m) => m.email.toLowerCase() === (email ?? '').toLowerCase(),
   );
-  const overview = monthlyOverview(group, monthKey());
+  const currentUser = me?.name ?? '';
+  const overview = monthlyOverview(group, month);
+
+  async function handleEditNominal(billId: string, amount: number) {
+    await updateBillEstimate(billId, amount);
+    await load();
+  }
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
-      <ThemedText type="subtitle">{group.name}</ThemedText>
-      <ThemedText themeColor="textSecondary">
+      <View style={styles.head}>
+        <ThemedText type="subtitle">{group.name}</ThemedText>
+        <ThemedText themeColor="textFaint" style={styles.code}>
+          {group.code}
+        </ThemedText>
+      </View>
+      <ThemedText themeColor="textSecondary" style={styles.members}>
         {group.members.map((m) => m.name).join(', ')}
       </ThemedText>
 
-      <View style={[styles.card, { backgroundColor: c.surface }]}>
-        <ThemedText themeColor="textFaint" style={styles.small}>
-          Total {monthLabel()}
-        </ThemedText>
-        <ThemedText style={styles.total}>{formatRp(overview.totalMonth)}</ThemedText>
-        {me ? (
-          <ThemedText themeColor="textSecondary" style={styles.small}>
-            Bagian kamu: {formatRp(overview.contributions[me.name] ?? 0)}
-          </ThemedText>
-        ) : null}
-      </View>
+      <Segmented
+        options={[
+          { label: 'Tagihan', value: 'tagihan' },
+          { label: 'Ringkasan', value: 'ringkasan' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      <ThemedText themeColor="textFaint" style={styles.small}>
-        TAGIHAN BULAN INI ({group.bills.length})
-      </ThemedText>
-      {group.bills.length === 0 ? (
-        <ThemedText themeColor="textFaint">
-          Belum ada tagihan. Tambahkan tagihan pertama.
-        </ThemedText>
-      ) : (
-        group.bills.map((bill) => {
-          const rec = readMonthRecord(group, monthKey(), bill.id);
-          const badge = billBadge(bill, rec);
-          return (
-            <View
-              key={bill.id}
-              style={[styles.billRow, { borderColor: c.border }]}
-            >
-              <ThemedText style={styles.billName}>{bill.name}</ThemedText>
-              <ThemedText themeColor="textFaint" style={styles.small}>
-                {badge.text}
-              </ThemedText>
+      {tab === 'tagihan' ? (
+        <>
+          <View style={[styles.hero, { backgroundColor: c.surface }]}>
+            <View style={styles.heroRow}>
+              <View>
+                <ThemedText themeColor="textFaint" style={styles.heroLabel}>
+                  Pengeluaran saya
+                </ThemedText>
+                <ThemedText style={styles.heroValue}>
+                  {formatRp(overview.contributions[currentUser] ?? 0)}
+                </ThemedText>
+              </View>
+              <View>
+                <ThemedText themeColor="textFaint" style={styles.heroLabel}>
+                  Total {monthLabel()}
+                </ThemedText>
+                <ThemedText style={styles.heroValue}>
+                  {formatRp(overview.totalMonth)}
+                </ThemedText>
+              </View>
             </View>
-          );
-        })
+            <View style={[styles.contribList, { borderTopColor: c.border }]}>
+              {overview.members.map((m) => (
+                <View key={m.name} style={styles.contribRow}>
+                  <ThemedText themeColor="textSecondary">{m.name}</ThemedText>
+                  <ThemedText themeColor="textSecondary">
+                    {formatRp(m.contribution)}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {group.bills.length === 0 ? (
+            <ThemedText themeColor="textFaint" style={styles.empty}>
+              Belum ada tagihan. Tambahkan tagihan pertama.
+            </ThemedText>
+          ) : (
+            group.bills.map((bill) => (
+              <BillCard
+                key={bill.id}
+                bill={bill}
+                record={readMonthRecord(group, month, bill.id)}
+                currentUser={currentUser}
+                onEditNominal={handleEditNominal}
+              />
+            ))
+          )}
+
+          <Button
+            label="+ Tambah tagihan baru"
+            variant="secondary"
+            onPress={() =>
+              router.push({
+                pathname: '/(app)/group/[id]/add-bill',
+                params: { id },
+              })
+            }
+          />
+        </>
+      ) : (
+        <ThemedText themeColor="textFaint" style={styles.empty}>
+          Tab Ringkasan (siapa belum bayar, tren, export, reminder) belum dibuat.
+        </ThemedText>
       )}
 
       <Button
-        label="Tambah tagihan baru"
-        variant="secondary"
-        onPress={() =>
-          router.push({ pathname: '/(app)/group/[id]/add-bill', params: { id } })
-        }
+        label="Kembali ke Home"
+        variant="ghost"
+        onPress={() => router.replace('/(app)')}
       />
-      <Button label="Kembali ke Home" variant="ghost" onPress={() => router.replace('/(app)')} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 14, padding: Spacing.three, gap: 4 },
-  total: { fontSize: 22, fontWeight: '800' },
-  small: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
-  billRow: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: Spacing.three,
+  head: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  billName: { fontSize: 15, fontWeight: '600' },
+  code: { fontSize: 13, fontWeight: '700', letterSpacing: 1 },
+  members: { marginTop: -Spacing.two },
+  hero: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
+  heroRow: { flexDirection: 'row', gap: Spacing.four },
+  heroLabel: { fontSize: 12 },
+  heroValue: { fontSize: 18, fontWeight: '800' },
+  contribList: { borderTopWidth: 1, paddingTop: Spacing.two, gap: 4 },
+  contribRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  empty: { fontSize: 13, textAlign: 'center', paddingVertical: Spacing.four },
 });

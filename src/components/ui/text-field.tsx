@@ -4,7 +4,9 @@ import {
   Text,
   TextInput,
   View,
+  type StyleProp,
   type TextInputProps,
+  type ViewStyle,
 } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
@@ -14,13 +16,14 @@ interface TextFieldProps extends TextInputProps {
   label?: string;
   error?: string;
   hint?: string;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(
-  ({ label, error, hint, style, ...props }, ref) => {
+  ({ label, error, hint, style, containerStyle, ...props }, ref) => {
     const c = useTheme();
     return (
-      <View style={styles.field}>
+      <View style={[styles.field, containerStyle]}>
         {label ? (
           <Text style={[styles.label, { color: c.textSecondary }]}>{label}</Text>
         ) : null}
