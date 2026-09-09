@@ -51,6 +51,8 @@ export interface SubmitProofOutcome {
   /** OCR verdict on whether the image is a transfer receipt at all. */
   isReceipt: boolean | null;
   suspiciousNote: string | null;
+  /** Nominal OCR read (null if unreadable / OCR down). */
+  ocrAmount: number | null;
 }
 
 /** A required member submits a transfer proof. */
@@ -82,6 +84,7 @@ export async function submitProof({
     amountOk: result.amountOk,
     isReceipt: result.isReceipt,
     suspiciousNote: analysis?.suspiciousNote ?? null,
+    ocrAmount: analysis?.amount ?? null,
   };
 }
 

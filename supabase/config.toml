@@ -17,3 +17,6 @@ enable_confirmations = true   # sends the OTP / confirmation code
 [functions.read-proof]
 # Require a valid Supabase session to call the OCR function.
 verify_jwt = true
+
+[functions.notify-proof]
+verify_jwt = true

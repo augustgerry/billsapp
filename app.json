@@ -41,7 +41,13 @@
           "cameraPermission": "Kongsi butuh akses kamera buat foto bukti transfer."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "color": "#0A84FF"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

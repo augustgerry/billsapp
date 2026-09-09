@@ -23,6 +23,7 @@ import {
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 
+import { registerPushToken } from '@/features/notifications/push';
 import { supabase } from '@/lib/supabase';
 
 export interface SignUpInput {
@@ -99,12 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Keep `public.profiles` in step with the session (once per user id).
+  // Keep `public.profiles` + the push token in step with the session (once per user id).
   useEffect(() => {
     const user = session?.user ?? null;
     if (user && syncedFor.current !== user.id) {
       syncedFor.current = user.id;
       void syncProfile(user);
+      void registerPushToken(user.id);
     }
     if (!user) syncedFor.current = null;
   }, [session]);

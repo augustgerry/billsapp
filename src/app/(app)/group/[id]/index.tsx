@@ -19,6 +19,7 @@ import {
   submitEarlyPayoff,
   submitProof,
 } from '@/features/bills/proof-actions';
+import { notifyProofUploaded } from '@/features/notifications/notify';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
 import { OwedCard } from '@/features/summary/owed-card';
@@ -28,6 +29,7 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   buildReminderText,
   computeMonthlyCategoryTotals,
+  expectedShare,
   monthlyOverview,
   readMonthRecord,
 } from '@/domain/billing';
@@ -112,6 +114,13 @@ export default function GroupScreen() {
             month,
             member: action.member,
             base64: img.base64,
+          });
+          void notifyProofUploaded({
+            groupId: g.id,
+            billId: bill.id,
+            month,
+            member: action.member,
+            amount: out.ocrAmount ?? expectedShare(bill, record),
           });
           if (out.isReceipt === false) {
             Alert.alert(
