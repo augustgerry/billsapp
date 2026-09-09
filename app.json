@@ -33,7 +33,14 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kongsi butuh akses galeri buat pilih foto bukti transfer.",
+          "cameraPermission": "Kongsi butuh akses kamera buat foto bukti transfer."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

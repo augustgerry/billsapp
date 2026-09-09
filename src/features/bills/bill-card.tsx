@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
@@ -9,28 +10,64 @@ import {
   billAmountForMonth,
   billBadge,
   billMetaText,
+  canConfirmPayment,
   canEditNominal,
+  canReupload,
+  canSelfDeclare,
+  earlyPayoffInfo,
   expectedShare,
   isInstallmentDone,
   paymentStatus,
   requiredMembers,
 } from '@/domain/billing';
+import { formatDateTime } from '@/domain/dates';
 import { formatRp, parseRupiah } from '@/domain/money';
 import { useTheme } from '@/hooks/use-theme';
-import type { Bill, MemberName, MemberPayment, MonthRecord } from '@/types/models';
+import type { Bill, MemberName, MonthRecord } from '@/types/models';
 
-const STATUS_LABEL: Record<MemberPayment['status'], string> = {
-  paid: 'Lunas',
-  unpaid: 'Belum bayar',
-  review: 'Perlu dicek',
-  awaiting: 'Menunggu konfirmasi',
-};
+export type ProofAction =
+  | { type: 'upload'; member: MemberName }
+  | { type: 'selfDeclare'; member: MemberName }
+  | { type: 'confirm'; member: MemberName }
+  | { type: 'reject'; member: MemberName }
+  | { type: 'reupload'; member: MemberName }
+  | { type: 'earlyPayoff' };
 
 interface BillCardProps {
   bill: Bill;
   record: MonthRecord;
   currentUser: MemberName;
   onEditNominal: (billId: string, amount: number) => Promise<void>;
+  onAction: (action: ProofAction) => Promise<void>;
+  resolveProofUrl: (path: string) => Promise<string>;
+}
+
+function RowAction({
+  label,
+  color,
+  onPress,
+  loading,
+  disabled,
+}: {
+  label: string;
+  color: string;
+  onPress: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={loading || disabled}
+      style={[styles.rowAction, { opacity: loading || disabled ? 0.4 : 1 }]}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={color} />
+      ) : (
+        <ThemedText style={[styles.rowActionText, { color }]}>{label}</ThemedText>
+      )}
+    </Pressable>
+  );
 }
 
 export function BillCard({
@@ -38,12 +75,17 @@ export function BillCard({
   record,
   currentUser,
   onEditNominal,
+  onAction,
+  resolveProofUrl,
 }: BillCardProps) {
   const c = useTheme();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(0);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [proofFor, setProofFor] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
 
   const badge = billBadge(bill, record);
   const badgeColor =
@@ -56,8 +98,18 @@ export function BillCard({
   const share = expectedShare(bill, record);
   const done = isInstallmentDone(bill);
   const required = requiredMembers(bill);
-  const canEdit = canEditNominal(bill, currentUser);
   const isPJ = currentUser === bill.responsible;
+  const payoff = earlyPayoffInfo(bill, record);
+
+  async function run(key: string, action: ProofAction) {
+    if (busyKey) return;
+    setBusyKey(key);
+    try {
+      await onAction(action);
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   async function saveEdit() {
     if (draft <= 0 || savingEdit) return;
@@ -70,34 +122,147 @@ export function BillCard({
     }
   }
 
+  async function toggleProof(member: string, path: string) {
+    if (proofFor === member) {
+      setProofFor(null);
+      return;
+    }
+    setProofFor(member);
+    setProofUrl(null);
+    try {
+      setProofUrl(await resolveProofUrl(path));
+    } catch {
+      setProofUrl(null);
+    }
+  }
+
   function memberRow(member: MemberName, rowAmount: number) {
     const status = paymentStatus(record, member);
+    const mine = currentUser === member;
+    const p = record.payments[member];
     const label =
-      bill.type === 'split'
-        ? `${member} → ${bill.responsible}`
-        : member;
-    let statusText = STATUS_LABEL[status];
-    let statusColor: string = c.textFaint;
-    if (status === 'paid') statusColor = c.success;
-    else if (status === 'review') statusColor = c.gold;
-    else if (status === 'awaiting') {
-      statusColor = c.gold;
-      statusText = isPJ
-        ? 'Perlu kamu konfirmasi'
-        : `Menunggu konfirmasi ${bill.responsible}`;
-    } else if (status === 'unpaid') statusColor = c.danger;
+      bill.type === 'split' ? `${member} → ${bill.responsible}` : member;
+
+    let statusText: string = {
+      paid: 'Lunas',
+      unpaid: 'Belum bayar',
+      review: 'Perlu dicek',
+      awaiting: `Menunggu konfirmasi ${bill.responsible}`,
+    }[status];
+    let statusColor: string =
+      status === 'paid'
+        ? c.success
+        : status === 'unpaid'
+          ? c.danger
+          : c.gold;
+    if (status === 'awaiting' && isPJ) statusText = 'Perlu kamu konfirmasi';
+
+    const actions: ReactNode[] = [];
+    if (status === 'unpaid' && mine) {
+      actions.push(
+        <RowAction
+          key="up"
+          label="Upload bukti"
+          color={c.primaryText}
+          loading={busyKey === `upload:${member}`}
+          disabled={!!busyKey}
+          onPress={() => run(`upload:${member}`, { type: 'upload', member })}
+        />,
+      );
+    } else if (status === 'review') {
+      if (canReupload(currentUser, member)) {
+        actions.push(
+          <RowAction
+            key="re"
+            label="Upload ulang"
+            color={c.textSecondary}
+            loading={busyKey === `reupload:${member}`}
+            disabled={!!busyKey}
+            onPress={() =>
+              run(`reupload:${member}`, { type: 'reupload', member })
+            }
+          />,
+        );
+      }
+      if (canSelfDeclare(bill, currentUser, member)) {
+        actions.push(
+          <RowAction
+            key="sd"
+            label={bill.type === 'split' ? 'Tandai sudah bayar' : 'Tandai valid'}
+            color={c.primaryText}
+            loading={busyKey === `selfDeclare:${member}`}
+            disabled={!!busyKey}
+            onPress={() =>
+              run(`selfDeclare:${member}`, { type: 'selfDeclare', member })
+            }
+          />,
+        );
+      }
+    } else if (status === 'awaiting' && canConfirmPayment(bill, currentUser)) {
+      actions.push(
+        <RowAction
+          key="ok"
+          label="Konfirmasi"
+          color={c.success}
+          loading={busyKey === `confirm:${member}`}
+          disabled={!!busyKey}
+          onPress={() => run(`confirm:${member}`, { type: 'confirm', member })}
+        />,
+        <RowAction
+          key="no"
+          label="Tolak"
+          color={c.danger}
+          loading={busyKey === `reject:${member}`}
+          disabled={!!busyKey}
+          onPress={() => run(`reject:${member}`, { type: 'reject', member })}
+        />,
+      );
+    }
+
+    const canView = (mine || isPJ) && !!p?.proofImage;
 
     return (
       <View key={member} style={[styles.memberRow, { borderTopColor: c.border }]}>
-        <View style={styles.memberLeft}>
-          <ThemedText style={styles.memberName}>{label}</ThemedText>
-          <ThemedText themeColor="textFaint" style={styles.memberAmount}>
-            {formatRp(rowAmount)}
+        <View style={styles.memberTop}>
+          <View style={styles.memberLeft}>
+            <ThemedText style={styles.memberName}>{label}</ThemedText>
+            <ThemedText themeColor="textFaint" style={styles.memberAmount}>
+              {formatRp(rowAmount)}
+              {p?.amount != null && p.status !== 'unpaid'
+                ? ` · terbaca ${formatRp(p.amount)}${p.ocrMatched === false ? ' (beda)' : ''}`
+                : ''}
+            </ThemedText>
+          </View>
+          <ThemedText style={[styles.statusText, { color: statusColor }]}>
+            {statusText}
           </ThemedText>
         </View>
-        <ThemedText style={[styles.statusText, { color: statusColor }]}>
-          {statusText}
-        </ThemedText>
+        {actions.length > 0 ? <View style={styles.actions}>{actions}</View> : null}
+        {canView && p?.proofImage ? (
+          <View>
+            <RowAction
+              label={proofFor === member ? 'Sembunyikan bukti' : 'Lihat bukti'}
+              color={c.primaryText}
+              onPress={() => toggleProof(member, p.proofImage!)}
+            />
+            {p.uploadedAt ? (
+              <ThemedText themeColor="textFaint" style={styles.uploadedAt}>
+                Diupload {formatDateTime(p.uploadedAt)}
+              </ThemedText>
+            ) : null}
+            {proofFor === member ? (
+              proofUrl ? (
+                <Image
+                  source={{ uri: proofUrl }}
+                  style={styles.proofImg}
+                  contentFit="contain"
+                />
+              ) : (
+                <ActivityIndicator style={styles.proofImg} color={c.primary} />
+              )
+            ) : null}
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -108,7 +273,10 @@ export function BillCard({
         <View
           style={[
             styles.icon,
-            { backgroundColor: (CategoryColors[bill.category] ?? c.primary) + '28' },
+            {
+              backgroundColor:
+                (CategoryColors[bill.category] ?? c.primary) + '28',
+            },
           ]}
         >
           <ThemedText>{CategoryIcons[bill.category] ?? '📄'}</ThemedText>
@@ -120,9 +288,7 @@ export function BillCard({
           </ThemedText>
         </View>
         <View style={styles.headerRight}>
-          <View
-            style={[styles.badge, { backgroundColor: badgeColor + '22' }]}
-          >
+          <View style={[styles.badge, { backgroundColor: badgeColor + '22' }]}>
             <ThemedText style={[styles.badgeText, { color: badgeColor }]}>
               {badge.text}
             </ThemedText>
@@ -133,7 +299,7 @@ export function BillCard({
 
       {open ? (
         <View style={styles.body}>
-          {canEdit ? (
+          {canEditNominal(bill, currentUser) ? (
             editing ? (
               <View style={styles.editBox}>
                 <TextField
@@ -189,6 +355,32 @@ export function BillCard({
           ) : (
             required.map((m) => memberRow(m, amount))
           )}
+
+          {payoff ? (
+            <View style={[styles.memberRow, { borderTopColor: c.border }]}>
+              <View style={styles.memberTop}>
+                <View style={styles.memberLeft}>
+                  <ThemedText style={styles.memberName}>
+                    Lunasi sisa {payoff.remaining}x sekaligus
+                  </ThemedText>
+                  <ThemedText themeColor="textFaint" style={styles.memberAmount}>
+                    {formatRp(payoff.remainingAmount)}
+                  </ThemedText>
+                </View>
+              </View>
+              {isPJ ? (
+                <View style={styles.actions}>
+                  <RowAction
+                    label="Upload bukti pelunasan"
+                    color={c.primaryText}
+                    loading={busyKey === 'earlyPayoff'}
+                    disabled={!!busyKey}
+                    onPress={() => run('earlyPayoff', { type: 'earlyPayoff' })}
+                  />
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -216,22 +408,30 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   badgeText: { fontSize: 11, fontWeight: '700' },
-  body: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.three, gap: 4 },
+  body: {
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+    gap: 4,
+  },
   editLink: { fontSize: 12, fontWeight: '700', paddingVertical: 4 },
   editBox: { gap: Spacing.two, paddingVertical: Spacing.two },
   row: { flexDirection: 'row', gap: Spacing.two },
   flex1: { flex: 1 },
   doneNote: { fontSize: 13, paddingVertical: Spacing.two },
-  memberRow: {
+  memberRow: { paddingVertical: 8, borderTopWidth: 1, gap: 6 },
+  memberTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: Spacing.two,
-    paddingVertical: 8,
-    borderTopWidth: 1,
   },
   memberLeft: { flex: 1 },
   memberName: { fontSize: 13, fontWeight: '600' },
   memberAmount: { fontSize: 12, marginTop: 1 },
-  statusText: { fontSize: 12, fontWeight: '700', textAlign: 'right' },
+  statusText: { fontSize: 12, fontWeight: '700', textAlign: 'right', flexShrink: 1 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
+  rowAction: { paddingVertical: 4 },
+  rowActionText: { fontSize: 12, fontWeight: '700' },
+  uploadedAt: { fontSize: 11, marginTop: 2 },
+  proofImg: { width: '100%', height: 220, marginTop: 6, borderRadius: 8 },
 });

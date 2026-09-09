@@ -1,6 +1,6 @@
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -8,7 +8,16 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { BillCard } from '@/features/bills/bill-card';
+import { BillCard, type ProofAction } from '@/features/bills/bill-card';
+import { pickProofImage } from '@/features/bills/pick-proof-image';
+import {
+  confirmPayment,
+  rejectPayment,
+  reuploadProof,
+  selfDeclare,
+  submitEarlyPayoff,
+  submitProof,
+} from '@/features/bills/proof-actions';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,7 +27,8 @@ import { formatRp } from '@/domain/money';
 import { updateBillEstimate } from '@/lib/bills-repository';
 import { fetchGroup } from '@/lib/groups-repository';
 import { loadMonth } from '@/lib/payments-repository';
-import type { Group } from '@/types/models';
+import { signedProofUrl } from '@/lib/proofs';
+import type { Bill, Group } from '@/types/models';
 
 type Tab = 'tagihan' | 'ringkasan';
 
@@ -76,6 +86,67 @@ export default function GroupScreen() {
   async function handleEditNominal(billId: string, amount: number) {
     await updateBillEstimate(billId, amount);
     await load();
+  }
+
+  async function handleAction(bill: Bill, action: ProofAction) {
+    const g = group!;
+    const record = readMonthRecord(g, month, bill.id);
+    try {
+      switch (action.type) {
+        case 'upload': {
+          const img = await pickProofImage();
+          if (!img) return;
+          const { matched } = await submitProof({
+            group: g,
+            bill,
+            record,
+            month,
+            member: action.member,
+            base64: img.base64,
+          });
+          if (!matched) {
+            Alert.alert(
+              'Perlu dicek',
+              'Nominal di bukti nggak kebaca / beda dari yang diharapkan. Cek lalu tandai kalau memang sudah bayar.',
+            );
+          }
+          break;
+        }
+        case 'earlyPayoff': {
+          const img = await pickProofImage();
+          if (!img) return;
+          const { matched } = await submitEarlyPayoff({
+            group: g,
+            bill,
+            record,
+            month,
+            base64: img.base64,
+          });
+          if (!matched) {
+            Alert.alert(
+              'Nominal beda',
+              'Nominal di bukti nggak cocok sama sisa cicilan. Coba lagi.',
+            );
+          }
+          break;
+        }
+        case 'selfDeclare':
+          await selfDeclare(bill, record, month, action.member);
+          break;
+        case 'confirm':
+          await confirmPayment(bill, record, month, action.member);
+          break;
+        case 'reject':
+          await rejectPayment(bill, record, month, action.member);
+          break;
+        case 'reupload':
+          await reuploadProof(g, bill, record, month, action.member);
+          break;
+      }
+      await load();
+    } catch (e) {
+      Alert.alert('Gagal', e instanceof Error ? e.message : 'Coba lagi');
+    }
   }
 
   return (
@@ -144,6 +215,8 @@ export default function GroupScreen() {
                 record={readMonthRecord(group, month, bill.id)}
                 currentUser={currentUser}
                 onEditNominal={handleEditNominal}
+                onAction={(action) => handleAction(bill, action)}
+                resolveProofUrl={signedProofUrl}
               />
             ))
           )}
