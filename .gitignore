@@ -31,7 +31,20 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# Supabase CLI
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# local dev scratch (not part of the project)
+.dev/
+
+# Windows / WSL mount artifacts
+*:Zone.Identifier
+*Zone.Identifier
 
 # typescript
 *.tsbuildinfo

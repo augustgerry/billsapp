@@ -1,0 +1,19 @@
+# Minimal Supabase CLI config. Run `supabase init` if you want the full
+# annotated version (it will keep this project_id). Everything not set here
+# uses CLI defaults.
+
+project_id = "kongsi"
+
+[auth]
+# Local dev redirect target (Expo dev server). Add your production scheme
+# ("billsapp://") and any EAS preview URLs in the Supabase dashboard too.
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["billsapp://"]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true   # sends the OTP / confirmation code
+
+[functions.read-proof]
+# Require a valid Supabase session to call the OCR function.
+verify_jwt = true
