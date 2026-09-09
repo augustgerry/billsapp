@@ -18,14 +18,12 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 | Routing auth-gated | `src/app/_layout.tsx` + `(auth)/` `(app)/` | Stack + guard + Supabase config gate |
 | Layar auth | `src/app/(auth)/{login,register,verify}.tsx` | fungsional, Enter submit, tombol disable |
 | Layar Home / Buat / Join / Login grup | `src/app/(app)/*` | fungsional (recent list, create RPC, join lookup, PIN) |
-| Dashboard grup + Tambah tagihan | `src/app/(app)/group/[id]/*` | **skeleton** — fetch + selector jalan, UI penuh belum |
+| Tambah tagihan | `src/app/(app)/group/[id]/add-bill.tsx` | fungsional — kategori, tanggal manual, single/split, blok Cicilan |
+| Dashboard tab Tagihan | `src/app/(app)/group/[id]/index.tsx` + `features/bills/bill-card.tsx` | fungsional — hero kontribusi, card per bill, expand rincian, Edit nominal |
+| Upload bukti + alur status | `features/bills/{proof-actions,pick-proof-image}.ts` | fungsional — upload→OCR→status, self-declare/confirm/reject/reupload, lunasi dipercepat single, lihat bukti |
+| Dashboard tab Ringkasan | — | **belum** (stub) |
 
-Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih.
-
-**Belum dikerjakan:** dashboard tab Tagihan/Ringkasan penuh (card per bill,
-expand rincian per orang, chart tren, export Excel/PDF, generator reminder),
-form Tambah tagihan, alur upload bukti + OCR di UI, realtime, polish gaya
-dark/iOS. Urutan di "Langkah berikutnya".
+Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih; 50 test lulus.
 
 ## Struktur folder
 
@@ -185,37 +183,38 @@ npm start        # expo dev server (butuh .env terisi)
 
 ## Langkah berikutnya
 
-Sudah kelar: repository layer, routing, layar auth, Home, Buat/Join/Login grup.
+Sudah kelar: repository layer, routing, layar auth, Home, Buat/Join/Login grup,
+**Tambah tagihan** (§5), **Dashboard tab Tagihan** (§6), **Upload bukti + alur
+status + lunasi dipercepat single** (§7).
+
 Sisanya:
 
-1. **Tambah tagihan** (brief §5) — form: kategori (ikon+warna, `CategoryColors`/
-   `CategoryIcons`), tanggal jatuh tempo diketik manual, tipe single/split,
-   field `tenor` + toggle "total ÷ tenor" kalau kategori Cicilan, pilih PJ /
-   splitMembers + "transfer ke siapa". Domain-nya (`perInstallmentFromTotal`,
-   dll) udah siap → `insertBill`.
-2. **Dashboard tab Tagihan** (brief §6) — card per bill, expand rincian per
-   orang (`monthlyOverview`, `billBadge`, `billMetaText`, `expectedShare`),
-   "Edit nominal" (PJ only, `canEditNominal` → `updateBillEstimate`).
-3. **Upload bukti + alur status** (brief §7) — image picker → `uploadProof` →
-   `readProof` → `applyProofUpload` → `commitBillRecord`; tombol per status
-   (`review`: "Upload ulang" / "Tandai…"; `awaiting`: PJ "Konfirmasi"/"Tolak").
-   Card jangan auto-collapse.
-4. **Dashboard tab Ringkasan** — kartu "siapa belum bayar" (jangan default
-   "Lunas" kalau `!hasDues`), chart tren (`computeMonthlyCategoryTotals` +
-   `loadAllMonths`), export Excel/PDF, generator teks reminder
-   (`buildReminderText`).
-5. **Lunasi dipercepat** single (`earlyPayoffInfo` / `applyEarlyPayoff`).
-6. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
-7. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi).
+1. **Dashboard tab Ringkasan** (§6 part 2) — kartu "siapa belum bayar"
+   (`monthlyOverview` udah kasih `owed`/`hasDues`; jangan default "Lunas" kalau
+   `!hasDues`), chart tren (`computeMonthlyCategoryTotals` + `loadAllMonths`),
+   export Excel/PDF, generator teks reminder (`buildReminderText`).
+2. **Deploy edge function `read-proof`** — blocked, token restricted (lihat
+   catatan). Sampai itu, upload bukti yang OCR-nya gagal langsung masuk
+   `review` (tetap jalan, cuma nggak auto-`paid`).
+3. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
+4. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi, salin
+   kode grup, dsb).
+5. Hardening: RLS `bills` UPDATE dipersempit (Edit nominal = PJ), rate-limit
+   OCR, resize gambar sebelum upload (`expo-image-manipulator`).
 
 Yang ditunda (brief): push/WhatsApp asli, lunasi-dipercepat untuk split,
 fitur agentic.
 
 ### Catatan / utang teknis
 
+- **Edge function `read-proof` belum di-deploy.** Access token yang dikasih
+  restricted — bisa baca project tapi 403 di endpoint Secrets & Functions.
+  Perlu token full-access, atau deploy manual lewat dashboard + set secret
+  `ANTHROPIC_API_KEY` di sana.
 - Supabase client belum di-generic-type (`Database`) — repo pakai cast manual
-  ke row types. Jalanin `supabase gen types typescript --linked` begitu project
-  ada, lalu balikin `<Database>` di `supabase.ts`.
+  ke row types. Jalanin `supabase gen types typescript --linked` (butuh token
+  full-access), lalu balikin `<Database>` di `supabase.ts`.
 - RLS `bills` UPDATE masih lebar (semua anggota). "Edit nominal = PJ only"
-  baru di UI — bisa dikencengin pakai trigger nanti.
+  baru di UI.
+- Gambar bukti belum di-resize sebelum upload (cuma `quality: 0.6` di picker).
 - `app-tabs`, `animated-icon`, dll dari template starter udah dihapus.
