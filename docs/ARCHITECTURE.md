@@ -11,7 +11,7 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 | Logika billing/cicilan/status | `src/domain/{billing,money,dates}.ts` | port murni, dependency-free |
 | Unit test | `src/**/*.test.ts` | 50 test, `npm test` (pakai `tsx`) |
 | Skema DB + RLS | `supabase/migrations/20260909000000_init.sql` | **applied** ke project `wyhihlddtnbyqvjutjyf` (7 tabel, RLS on, RPC, bucket `proofs`) |
-| Edge Function OCR | `supabase/functions/read-proof/` | Deno, Anthropic vision (default `claude-sonnet-5`) — **belum di-deploy** (butuh `ANTHROPIC_API_KEY` secret) |
+| Edge Function OCR | `supabase/functions/read-proof/` | **deployed + ACTIVE**, secret `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL=claude-sonnet-5` set. ⚠️ akun Anthropic $0 credit — OCR balikin error sampai di-top-up |
 | Supabase client | `src/lib/supabase.ts` | session di `expo-secure-store` (chunked) |
 | Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, di-wire di root `_layout` |
 | Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, semua lewat RLS |
@@ -21,7 +21,7 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 | Tambah tagihan | `src/app/(app)/group/[id]/add-bill.tsx` | fungsional — kategori, tanggal manual, single/split, blok Cicilan |
 | Dashboard tab Tagihan | `src/app/(app)/group/[id]/index.tsx` + `features/bills/bill-card.tsx` | fungsional — hero kontribusi, card per bill, expand rincian, Edit nominal |
 | Upload bukti + alur status | `features/bills/{proof-actions,pick-proof-image}.ts` | fungsional — upload→OCR→status, self-declare/confirm/reject/reupload, lunasi dipercepat single, lihat bukti |
-| Dashboard tab Ringkasan | — | **belum** (stub) |
+| Dashboard tab Ringkasan | `features/summary/*` | fungsional — "siapa belum bayar", chart tren (Views), export CSV, generator reminder + salin |
 
 Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih; 50 test lulus.
 
@@ -184,37 +184,34 @@ npm start        # expo dev server (butuh .env terisi)
 ## Langkah berikutnya
 
 Sudah kelar: repository layer, routing, layar auth, Home, Buat/Join/Login grup,
-**Tambah tagihan** (§5), **Dashboard tab Tagihan** (§6), **Upload bukti + alur
-status + lunasi dipercepat single** (§7).
+**Tambah tagihan** (§5), **Dashboard tab Tagihan** (§6a), **Upload bukti + alur
+status + lunasi dipercepat single** (§7), **Dashboard tab Ringkasan** (§6b),
+**edge function `read-proof` deployed**.
 
 Sisanya:
 
-1. **Dashboard tab Ringkasan** (§6 part 2) — kartu "siapa belum bayar"
-   (`monthlyOverview` udah kasih `owed`/`hasDues`; jangan default "Lunas" kalau
-   `!hasDues`), chart tren (`computeMonthlyCategoryTotals` + `loadAllMonths`),
-   export Excel/PDF, generator teks reminder (`buildReminderText`).
-2. **Deploy edge function `read-proof`** — blocked, token restricted (lihat
-   catatan). Sampai itu, upload bukti yang OCR-nya gagal langsung masuk
-   `review` (tetap jalan, cuma nggak auto-`paid`).
-3. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
-4. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi, salin
-   kode grup, dsb).
-5. Hardening: RLS `bills` UPDATE dipersempit (Edit nominal = PJ), rate-limit
-   OCR, resize gambar sebelum upload (`expo-image-manipulator`).
+1. **Top-up kredit Anthropic** — function jalan tapi API balikin "credit
+   balance too low". Sampai di-isi, upload bukti masuk `review` (nggak
+   auto-`paid`).
+2. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
+3. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi, salin
+   kode grup, custom date picker popup, dsb).
+4. Hardening: RLS `bills` UPDATE dipersempit (Edit nominal = PJ), rate-limit
+   OCR, resize gambar sebelum upload (`expo-image-manipulator`), export PDF.
+5. Jalanin `supabase gen types typescript` → balikin `<Database>` generic di
+   `supabase.ts`, hapus cast manual di repo.
 
 Yang ditunda (brief): push/WhatsApp asli, lunasi-dipercepat untuk split,
 fitur agentic.
 
 ### Catatan / utang teknis
 
-- **Edge function `read-proof` belum di-deploy.** Access token yang dikasih
-  restricted — bisa baca project tapi 403 di endpoint Secrets & Functions.
-  Perlu token full-access, atau deploy manual lewat dashboard + set secret
-  `ANTHROPIC_API_KEY` di sana.
+- Akun Anthropic $0 credit → OCR error sampai di-top-up di
+  console.anthropic.com. Key + model udah keset sebagai Supabase secret.
 - Supabase client belum di-generic-type (`Database`) — repo pakai cast manual
-  ke row types. Jalanin `supabase gen types typescript --linked` (butuh token
-  full-access), lalu balikin `<Database>` di `supabase.ts`.
+  ke row types.
 - RLS `bills` UPDATE masih lebar (semua anggota). "Edit nominal = PJ only"
   baru di UI.
 - Gambar bukti belum di-resize sebelum upload (cuma `quality: 0.6` di picker).
+- Export cuma CSV (buka di Excel/Sheets). PDF dari prototipe belum diport.
 - `app-tabs`, `animated-icon`, dll dari template starter udah dihapus.
