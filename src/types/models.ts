@@ -175,11 +175,21 @@ export interface MemberPayment {
   /** Epoch ms of the upload. */
   uploadedAt: number | null;
   /**
-   * Whether OCR's reading matched the expected share within tolerance.
+   * Whether OCR's *reading* matched the expected share within tolerance.
    * Kept so the PJ has context when confirming an `awaiting` payment
    * (the prototype referenced this but never persisted it).
    */
   ocrMatched?: boolean;
+  /**
+   * Whether the image reads as a bank / e-wallet transfer receipt at all —
+   * independent of the amount. `false` => show the PJ a firm "this isn't a
+   * transfer proof" message (distinct from "real proof, amount unclear").
+   */
+  isReceipt?: boolean | null;
+  /** OCR's guess at the source ("GoPay", "BCA", ...). */
+  platform?: string | null;
+  /** Short note if the image looks visually off / edited. */
+  suspiciousNote?: string | null;
 }
 
 export interface MonthRecord {

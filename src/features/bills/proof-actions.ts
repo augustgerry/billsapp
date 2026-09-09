@@ -43,6 +43,16 @@ interface UploadArgs {
   base64: string;
 }
 
+export interface SubmitProofOutcome {
+  /** Auto-settled to `paid`. */
+  matched: boolean;
+  /** OCR reading was within tolerance of the expected amount. */
+  amountOk: boolean;
+  /** OCR verdict on whether the image is a transfer receipt at all. */
+  isReceipt: boolean | null;
+  suspiciousNote: string | null;
+}
+
 /** A required member submits a transfer proof. */
 export async function submitProof({
   group,
@@ -51,25 +61,28 @@ export async function submitProof({
   month,
   member,
   base64,
-}: UploadArgs): Promise<{ matched: boolean; ocrAmount: number | null }> {
+}: UploadArgs): Promise<SubmitProofOutcome> {
   const path = proofObjectPath(group.id, bill.id, month, member);
   await uploadProof(path, base64ToBytes(base64), 'image/jpeg');
 
-  let ocrAmount: number | null = null;
-  try {
-    ocrAmount = (await readProof(base64, 'image/jpeg')).amount;
-  } catch {
-    ocrAmount = null; // OCR down -> treat as unreadable, lands in `review`
-  }
+  const analysis = await readProof(base64, 'image/jpeg').catch(() => null);
 
   const result = applyProofUpload(bill, record, {
     member,
-    ocrAmount,
+    ocrAmount: analysis?.amount ?? null,
     proofImage: path,
     now: Date.now(),
+    isReceipt: analysis?.isReceipt ?? null,
+    platform: analysis?.platform ?? null,
+    suspiciousNote: analysis?.suspiciousNote ?? null,
   });
   await commitBillRecord(month, bill, result);
-  return { matched: result.matched, ocrAmount };
+  return {
+    matched: result.matched,
+    amountOk: result.amountOk,
+    isReceipt: result.isReceipt,
+    suspiciousNote: analysis?.suspiciousNote ?? null,
+  };
 }
 
 /** Early payoff proof (single-type installments only). */

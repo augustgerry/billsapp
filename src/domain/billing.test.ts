@@ -181,6 +181,24 @@ test('applyProofUpload: single non-installment clean match -> paid + locks month
   assert.equal(rec.payments.Gerry, undefined);
 });
 
+test('applyProofUpload: isReceipt=false blocks auto-paid even on an amount match', () => {
+  const out = applyProofUpload(singleBill(), emptyRecord(), {
+    member: 'Gerry',
+    ocrAmount: 300000,
+    proofImage: 'x',
+    now: 1,
+    isReceipt: false,
+    suspiciousNote: 'tata letak aneh',
+  });
+  assert.equal(out.matched, false);
+  assert.equal(out.amountOk, true); // the number matched...
+  assert.equal(out.record.payments.Gerry.status, 'review'); // ...but a human must check
+  assert.equal(out.record.payments.Gerry.isReceipt, false);
+  assert.equal(out.record.payments.Gerry.ocrMatched, true);
+  assert.equal(out.record.payments.Gerry.suspiciousNote, 'tata letak aneh');
+  assert.equal(out.advanced, false);
+});
+
 test('applyProofUpload: mismatch -> review, month nominal untouched', () => {
   const out = applyProofUpload(singleBill(), emptyRecord(), {
     member: 'Gerry',

@@ -1,32 +1,42 @@
 /**
- * read-proof — OCR a transfer receipt and return the transferred nominal.
+ * read-proof — analyse a transfer-receipt screenshot.
  *
  * Runs on Supabase Edge (Deno). The Anthropic key lives in the function's
- * environment (`supabase secrets set ANTHROPIC_API_KEY=...`) and is never sent
- * to the client — this replaces the prototype's direct browser call to
- * api.anthropic.com.
+ * environment (`supabase secrets set ANTHROPIC_API_KEY=...`) and never reaches
+ * the client.
  *
  * Request  (POST, JSON):
  *   { "imageBase64": "<base64 or data: URI>", "mediaType"?: "image/jpeg" }
  * Response (JSON):
- *   { "amount": number | null, "model": string }   // amount is rupiah, no separators
- *   { "amount": null, "refused": true }             // safety refusal
- *   { "error": string }                             // 4xx / 5xx
+ *   {
+ *     "amount": number | null,        // rupiah transferred, no separators
+ *     "isReceipt": boolean,           // does it look like a bank/e-wallet transfer proof at all
+ *     "platform": string | null,      // best guess: "GoPay" | "BCA" | ...
+ *     "suspiciousNote": string | null,// short note if the image looks edited / off
+ *     "model": string
+ *   }
+ *   { "amount": null, "isReceipt": false, "refused": true }  // safety refusal
+ *   { "error": string }                                      // 4xx / 5xx
  *
- * Model: defaults to `claude-sonnet-5`. This task is "read one number off a
- * receipt" — no heavy reasoning — and it runs many times per household per
- * month, so cost is minimised deliberately. Override with the `ANTHROPIC_MODEL`
- * secret. See open question #5 in docs/ARCHITECTURE.md.
+ * Model: defaults to `claude-sonnet-5` (narrow task, called often). Override
+ * with the `ANTHROPIC_MODEL` secret.
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@^0.124.0';
 
 const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-sonnet-5';
 
-const PROMPT =
-  'Ini screenshot bukti transfer bank / e-wallet Indonesia. Baca nominal yang ' +
-  'ditransfer (bukan saldo, bukan biaya admin). Jawab HANYA dalam format JSON ' +
-  'tanpa teks lain: {"amount": <angka tanpa titik/koma, atau null jika tidak jelas>}';
+const PROMPT = `Kamu memeriksa satu gambar yang diklaim sebagai bukti transfer bank / e-wallet Indonesia.
+
+Jawab HANYA dengan JSON (tanpa teks lain, tanpa markdown) dengan bentuk persis:
+{
+  "amount": <angka nominal yang DITRANSFER, tanpa titik/koma, atau null kalau tidak jelas>,
+  "is_receipt": <true kalau gambar ini SECARA UMUM terlihat seperti tangkapan layar bukti transfer / struk pembayaran bank atau e-wallet (ada nominal, status berhasil, tujuan, dsb), terlepas dari nominalnya kebaca atau tidak; false kalau ini foto/gambar lain (meme, foto orang, screenshot chat biasa, dokumen tak terkait, dll)>,
+  "platform": <tebakan sumber bukti: "GoPay" | "OVO" | "DANA" | "ShopeePay" | "LinkAja" | nama bank (mis. "BCA", "Mandiri", "BNI", "BRI") | "Lainnya" | null kalau tidak bisa ditebak>,
+  "suspicious_note": <kalimat singkat Bahasa Indonesia kalau ADA tanda visual yang janggal: font tidak konsisten, perataan teks aneh, angka nominal terlihat ditempel/diedit, elemen UI tidak natural, resolusi campur. null kalau tidak ada yang mencurigakan>
+}
+
+Fokus "amount" ke nominal yang dikirim, bukan saldo, bukan biaya admin, bukan total tagihan.`;
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -41,18 +51,42 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-/** Pull an integer rupiah amount out of the model's reply, tolerating fences. */
-function extractAmount(text: string): number | null {
+interface Analysis {
+  amount: number | null;
+  isReceipt: boolean;
+  platform: string | null;
+  suspiciousNote: string | null;
+}
+
+function coerceAmount(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+
+function coerceString(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  return s.length === 0 || s.toLowerCase() === 'null' ? null : s;
+}
+
+function parseAnalysis(text: string): Analysis {
   const clean = text.replace(/```json|```/g, '').trim();
   try {
-    const parsed = JSON.parse(clean);
-    const n = Number(parsed?.amount);
-    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    const p = JSON.parse(clean) as Record<string, unknown>;
+    return {
+      amount: coerceAmount(p.amount),
+      isReceipt: p.is_receipt === true,
+      platform: coerceString(p.platform),
+      suspiciousNote: coerceString(p.suspicious_note),
+    };
   } catch {
     const m = clean.match(/-?\d[\d.,]*/);
-    if (!m) return null;
-    const n = Number(m[0].replace(/[.,]/g, ''));
-    return Number.isFinite(n) && n > 0 ? n : null;
+    return {
+      amount: m ? coerceAmount(m[0].replace(/[.,]/g, '')) : null,
+      isReceipt: false,
+      platform: null,
+      suspiciousNote: null,
+    };
   }
 }
 
@@ -84,7 +118,7 @@ Deno.serve(async (req) => {
   try {
     const resp = await client.messages.create({
       model: MODEL,
-      max_tokens: 200,
+      max_tokens: 400,
       output_config: { effort: 'low' },
       messages: [
         {
@@ -101,7 +135,14 @@ Deno.serve(async (req) => {
     });
 
     if (resp.stop_reason === 'refusal') {
-      return json({ amount: null, refused: true, model: resp.model });
+      return json({
+        amount: null,
+        isReceipt: false,
+        platform: null,
+        suspiciousNote: null,
+        refused: true,
+        model: resp.model,
+      });
     }
 
     const text = resp.content
@@ -109,7 +150,7 @@ Deno.serve(async (req) => {
       .map((b) => b.text)
       .join('');
 
-    return json({ amount: extractAmount(text), model: resp.model });
+    return json({ ...parseAnalysis(text), model: resp.model });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return json({ error: message }, 502);

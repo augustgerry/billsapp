@@ -105,7 +105,7 @@ export default function GroupScreen() {
         case 'upload': {
           const img = await pickProofImage();
           if (!img) return;
-          const { matched } = await submitProof({
+          const out = await submitProof({
             group: g,
             bill,
             record,
@@ -113,7 +113,14 @@ export default function GroupScreen() {
             member: action.member,
             base64: img.base64,
           });
-          if (!matched) {
+          if (out.isReceipt === false) {
+            Alert.alert(
+              'Bukan bukti transfer',
+              'Gambar yang diupload tidak terlihat seperti bukti transfer bank / e-wallet. Konfirmasi langsung ke yang bayar sebelum ditandai lunas.',
+            );
+          } else if (out.suspiciousNote) {
+            Alert.alert('Perlu dicek teliti', out.suspiciousNote);
+          } else if (!out.matched) {
             Alert.alert(
               'Perlu dicek',
               'Nominal di bukti nggak kebaca / beda dari yang diharapkan. Cek lalu tandai kalau memang sudah bayar.',

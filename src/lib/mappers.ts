@@ -63,6 +63,9 @@ export function paymentFromRow(row: PaymentRow): MemberPayment {
     proofImage: row.proof_path,
     uploadedAt: row.uploaded_at ? Date.parse(row.uploaded_at) : null,
     ocrMatched: row.ocr_matched ?? undefined,
+    isReceipt: row.is_receipt,
+    platform: row.platform,
+    suspiciousNote: row.suspicious_note,
   };
 }
 
@@ -157,6 +160,9 @@ export function paymentToRow(
     amount: payment.amount,
     proof_path: payment.proofImage,
     ocr_matched: payment.ocrMatched ?? null,
+    is_receipt: payment.isReceipt ?? null,
+    platform: payment.platform ?? null,
+    suspicious_note: payment.suspiciousNote ?? null,
     uploaded_at: payment.uploadedAt
       ? new Date(payment.uploadedAt).toISOString()
       : null,

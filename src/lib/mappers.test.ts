@@ -84,6 +84,9 @@ test('paymentFromRow maps snake_case + parses timestamp', () => {
     amount: 95000,
     proof_path: 'g1/b1/2026-09/Kaka.jpg',
     ocr_matched: false,
+    is_receipt: true,
+    platform: 'GoPay',
+    suspicious_note: null,
     uploaded_at: '2026-09-05T10:00:00.000Z',
     updated_at: '2026-09-05T10:00:00.000Z',
   };
@@ -92,6 +95,8 @@ test('paymentFromRow maps snake_case + parses timestamp', () => {
   assert.equal(p.amount, 95000);
   assert.equal(p.proofImage, 'g1/b1/2026-09/Kaka.jpg');
   assert.equal(p.ocrMatched, false);
+  assert.equal(p.isReceipt, true);
+  assert.equal(p.platform, 'GoPay');
   assert.equal(p.uploadedAt, Date.parse('2026-09-05T10:00:00.000Z'));
 });
 
@@ -105,6 +110,7 @@ test('paymentToRow: null timestamp, null ocr flag stay null', () => {
   assert.equal(row.uploaded_at, null);
   assert.equal(row.ocr_matched, null);
   assert.equal(row.proof_path, null);
+  assert.equal(row.is_receipt, null);
 });
 
 test('assembleMonth folds bill_months + payments by bill id', () => {
@@ -126,6 +132,9 @@ test('assembleMonth folds bill_months + payments by bill id', () => {
       amount: 120000,
       proof_path: null,
       ocr_matched: true,
+      is_receipt: null,
+      platform: null,
+      suspicious_note: null,
       uploaded_at: null,
       updated_at: 'x',
     },
@@ -137,6 +146,9 @@ test('assembleMonth folds bill_months + payments by bill id', () => {
       amount: null,
       proof_path: null,
       ocr_matched: null,
+      is_receipt: null,
+      platform: null,
+      suspicious_note: null,
       uploaded_at: null,
       updated_at: 'x',
     },

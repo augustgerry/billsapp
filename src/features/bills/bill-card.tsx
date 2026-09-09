@@ -231,12 +231,23 @@ export function BillCard({
               {p?.amount != null && p.status !== 'unpaid'
                 ? ` · terbaca ${formatRp(p.amount)}${p.ocrMatched === false ? ' (beda)' : ''}`
                 : ''}
+              {p?.platform ? ` · ${p.platform}` : ''}
             </ThemedText>
           </View>
           <ThemedText style={[styles.statusText, { color: statusColor }]}>
             {statusText}
           </ThemedText>
         </View>
+        {p?.isReceipt === false && p.status !== 'unpaid' ? (
+          <ThemedText style={[styles.warn, { color: c.danger }]}>
+            ⚠️ Gambar ini tidak terlihat seperti bukti transfer — cek langsung
+            ke yang bayar.
+          </ThemedText>
+        ) : p?.suspiciousNote && p.status !== 'unpaid' ? (
+          <ThemedText style={[styles.warn, { color: c.gold }]}>
+            ⚠️ {p.suspiciousNote}
+          </ThemedText>
+        ) : null}
         {actions.length > 0 ? <View style={styles.actions}>{actions}</View> : null}
         {canView && p?.proofImage ? (
           <View>
@@ -432,6 +443,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
   rowAction: { paddingVertical: 4 },
   rowActionText: { fontSize: 12, fontWeight: '700' },
+  warn: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
   uploadedAt: { fontSize: 11, marginTop: 2 },
   proofImg: { width: '100%', height: 220, marginTop: 6, borderRadius: 8 },
 });

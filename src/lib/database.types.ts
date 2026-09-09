@@ -77,6 +77,9 @@ export interface PaymentRow {
   amount: number | null;
   proof_path: string | null;
   ocr_matched: boolean | null;
+  is_receipt: boolean | null;
+  platform: string | null;
+  suspicious_note: string | null;
   uploaded_at: string | null;
   updated_at: string;
 }

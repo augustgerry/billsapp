@@ -207,6 +207,10 @@ export interface ProofUploadInput {
   proofImage: string;
   /** Epoch ms. */
   now: number;
+  /** OCR: does the image read as a transfer receipt at all? `false` blocks auto-paid. */
+  isReceipt?: boolean | null;
+  platform?: string | null;
+  suspiciousNote?: string | null;
 }
 
 export interface BillRecordResult {
@@ -227,20 +231,30 @@ export function applyProofUpload(
   bill: Bill,
   record: MonthRecord,
   input: ProofUploadInput,
-): BillRecordResult & { matched: boolean } {
+): BillRecordResult & {
+  matched: boolean;
+  amountOk: boolean;
+  isReceipt: boolean | null;
+} {
   const nextBill = cloneBill(bill);
   const nextRecord = cloneRecord(record);
-  const matched = amountMatches(
+  const amountOk = amountMatches(
     input.ocrAmount,
     expectedShare(nextBill, nextRecord),
   );
+  // an image the OCR says isn't a receipt never auto-settles, even on an
+  // amount match — it must be checked by a person.
+  const matched = amountOk && input.isReceipt !== false;
 
   nextRecord.payments[input.member] = {
     status: matched ? 'paid' : 'review',
     amount: input.ocrAmount,
     proofImage: input.proofImage,
     uploadedAt: input.now,
-    ocrMatched: matched,
+    ocrMatched: amountOk,
+    isReceipt: input.isReceipt ?? null,
+    platform: input.platform ?? null,
+    suspiciousNote: input.suspiciousNote ?? null,
   };
 
   let advanced = false;
@@ -251,7 +265,14 @@ export function applyProofUpload(
     advanced = maybeAdvanceInstallment(nextBill, nextRecord);
   }
 
-  return { bill: nextBill, record: nextRecord, matched, advanced };
+  return {
+    bill: nextBill,
+    record: nextRecord,
+    matched,
+    advanced,
+    amountOk,
+    isReceipt: input.isReceipt ?? null,
+  };
 }
 
 /**

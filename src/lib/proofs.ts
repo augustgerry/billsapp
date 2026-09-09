@@ -50,6 +50,9 @@ export async function signedProofUrl(
 
 export interface ReadProofResult {
   amount: number | null;
+  isReceipt: boolean;
+  platform: string | null;
+  suspiciousNote: string | null;
   refused?: boolean;
   model?: string;
 }
