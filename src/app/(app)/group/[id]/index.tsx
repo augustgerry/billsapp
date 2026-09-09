@@ -22,6 +22,7 @@ import {
 import { notifyProofUploaded } from '@/features/notifications/notify';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
+import { useGroupRealtime } from '@/features/groups/use-group-realtime';
 import { OwedCard } from '@/features/summary/owed-card';
 import { TrendChart } from '@/features/summary/trend-chart';
 import { exportRekapCsv } from '@/features/summary/export-rekap';
@@ -68,6 +69,12 @@ export default function GroupScreen() {
     useCallback(() => {
       void load();
     }, [load]),
+  );
+
+  useGroupRealtime(
+    id,
+    group?.bills.map((b) => b.id) ?? [],
+    load,
   );
 
   if (!isGroupUnlocked(id)) {
