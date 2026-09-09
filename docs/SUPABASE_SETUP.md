@@ -1,7 +1,12 @@
 # Setup Supabase untuk Kongsi
 
-Migrasi & Edge Function ada di repo tapi **belum pernah dijalankan** ke project
-Supabase manapun. Ini langkahnya.
+Status project `wyhihlddtnbyqvjutjyf` (region ap-southeast-1):
+- ✅ `.env` terisi (URL + publishable key)
+- ✅ Migrasi `20260909000000_init.sql` sudah di-apply (7 tabel, RLS, RPC, bucket `proofs`)
+- ⬜ Template email OTP (langkah 5)
+- ⬜ Edge Function `read-proof` + secret `ANTHROPIC_API_KEY` (langkah 6)
+
+Langkah di bawah buat referensi / setup dari nol.
 
 ## 1. Bikin project
 

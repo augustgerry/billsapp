@@ -11,6 +11,11 @@
 
 create extension if not exists "pgcrypto";
 
+-- Helper functions below reference tables that are created later in this file.
+-- LANGUAGE sql validates its body at creation time, so defer that check for
+-- the whole migration (Supabase's own generated migrations do the same).
+set check_function_bodies = off;
+
 -- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------

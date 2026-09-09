@@ -10,8 +10,8 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 | Tipe domain | `src/types/models.ts` | 1:1 dengan data model di brief |
 | Logika billing/cicilan/status | `src/domain/{billing,money,dates}.ts` | port murni, dependency-free |
 | Unit test | `src/**/*.test.ts` | 50 test, `npm test` (pakai `tsx`) |
-| Skema DB + RLS | `supabase/migrations/0001_init.sql` | **belum dijalankan** — lihat `SUPABASE_SETUP.md` |
-| Edge Function OCR | `supabase/functions/read-proof/` | Deno, Anthropic vision (default `claude-sonnet-5`) |
+| Skema DB + RLS | `supabase/migrations/20260909000000_init.sql` | **applied** ke project `wyhihlddtnbyqvjutjyf` (7 tabel, RLS on, RPC, bucket `proofs`) |
+| Edge Function OCR | `supabase/functions/read-proof/` | Deno, Anthropic vision (default `claude-sonnet-5`) — **belum di-deploy** (butuh `ANTHROPIC_API_KEY` secret) |
 | Supabase client | `src/lib/supabase.ts` | session di `expo-secure-store` (chunked) |
 | Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, di-wire di root `_layout` |
 | Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, semua lewat RLS |
@@ -52,7 +52,7 @@ src/
   components/ui/               # Screen, Button, TextField, TextLink, LoadingScreen
   constants/theme.ts           # palet dark-first (dari prototipe) + kategori
 supabase/
-  migrations/0001_init.sql   functions/read-proof/index.ts   config.toml
+  migrations/20260909000000_init.sql   functions/read-proof/index.ts   config.toml
 docs/
 ```
 
