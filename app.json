@@ -40,7 +40,8 @@
           "photosPermission": "Kongsi butuh akses galeri buat pilih foto bukti transfer.",
           "cameraPermission": "Kongsi butuh akses kamera buat foto bukti transfer."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

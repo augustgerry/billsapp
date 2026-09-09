@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
@@ -20,13 +21,21 @@ import {
 } from '@/features/bills/proof-actions';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
+import { OwedCard } from '@/features/summary/owed-card';
+import { TrendChart } from '@/features/summary/trend-chart';
+import { exportRekapCsv } from '@/features/summary/export-rekap';
 import { useTheme } from '@/hooks/use-theme';
-import { monthlyOverview, readMonthRecord } from '@/domain/billing';
+import {
+  buildReminderText,
+  computeMonthlyCategoryTotals,
+  monthlyOverview,
+  readMonthRecord,
+} from '@/domain/billing';
 import { monthKey, monthLabel } from '@/domain/dates';
 import { formatRp } from '@/domain/money';
 import { updateBillEstimate } from '@/lib/bills-repository';
 import { fetchGroup } from '@/lib/groups-repository';
-import { loadMonth } from '@/lib/payments-repository';
+import { loadAllMonths } from '@/lib/payments-repository';
 import { signedProofUrl } from '@/lib/proofs';
 import type { Bill, Group } from '@/types/models';
 
@@ -46,7 +55,7 @@ export default function GroupScreen() {
     setError(null);
     try {
       const g = await fetchGroup(id);
-      g.monthly[month] = await loadMonth(id, month);
+      g.monthly = await loadAllMonths(id);
       setGroup(g);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat grup');
@@ -233,9 +242,47 @@ export default function GroupScreen() {
           />
         </>
       ) : (
-        <ThemedText themeColor="textFaint" style={styles.empty}>
-          Tab Ringkasan (siapa belum bayar, tren, export, reminder) belum dibuat.
-        </ThemedText>
+        <>
+          <OwedCard members={overview.members} />
+
+          <View style={[styles.hero, { backgroundColor: c.surface }]}>
+            <ThemedText style={styles.blockTitle}>
+              Tren pengeluaran bulanan
+            </ThemedText>
+            <TrendChart data={computeMonthlyCategoryTotals(group)} />
+            <Button
+              label="Export ke Excel (CSV)"
+              variant="secondary"
+              onPress={async () => {
+                try {
+                  await exportRekapCsv(group);
+                } catch (e) {
+                  Alert.alert(
+                    'Gagal export',
+                    e instanceof Error ? e.message : 'Coba lagi',
+                  );
+                }
+              }}
+            />
+          </View>
+
+          <View style={[styles.hero, { backgroundColor: c.surface }]}>
+            <ThemedText style={styles.blockTitle}>Pengingat</ThemedText>
+            <View style={[styles.reminderBox, { backgroundColor: c.surface2 }]}>
+              <ThemedText themeColor="textSecondary" style={styles.reminderText}>
+                {buildReminderText(group, month)}
+              </ThemedText>
+            </View>
+            <Button
+              label="Salin teks pengingat"
+              variant="secondary"
+              onPress={async () => {
+                await Clipboard.setStringAsync(buildReminderText(group, month));
+                Alert.alert('Tersalin', 'Teks pengingat sudah disalin.');
+              }}
+            />
+          </View>
+        </>
       )}
 
       <Button
@@ -256,6 +303,9 @@ const styles = StyleSheet.create({
   code: { fontSize: 13, fontWeight: '700', letterSpacing: 1 },
   members: { marginTop: -Spacing.two },
   hero: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
+  blockTitle: { fontSize: 16, fontWeight: '700' },
+  reminderBox: { borderRadius: 10, padding: Spacing.three },
+  reminderText: { fontSize: 13, lineHeight: 19 },
   heroRow: { flexDirection: 'row', gap: Spacing.four },
   heroLabel: { fontSize: 12 },
   heroValue: { fontSize: 18, fontWeight: '800' },
