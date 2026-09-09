@@ -3,43 +3,56 @@
 Dokumen ini nyatet keputusan porting dari prototipe (`kongsi-pilot.html`) ke
 React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 
-## Status per increment ini
-
-Sudah selesai (fondasi, belum ada layar):
+## Status
 
 | Bagian | Lokasi | Catatan |
 |---|---|---|
 | Tipe domain | `src/types/models.ts` | 1:1 dengan data model di brief |
 | Logika billing/cicilan/status | `src/domain/{billing,money,dates}.ts` | port murni, dependency-free |
-| Unit test domain | `src/domain/*.test.ts` | 40 test, `npm test` (pakai `tsx`) |
+| Unit test | `src/**/*.test.ts` | 50 test, `npm test` (pakai `tsx`) |
 | Skema DB + RLS | `supabase/migrations/0001_init.sql` | **belum dijalankan** — lihat `SUPABASE_SETUP.md` |
-| Edge Function OCR | `supabase/functions/read-proof/` | Deno, panggil Anthropic vision |
+| Edge Function OCR | `supabase/functions/read-proof/` | Deno, Anthropic vision (default `claude-sonnet-5`) |
 | Supabase client | `src/lib/supabase.ts` | session di `expo-secure-store` (chunked) |
-| Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, belum di-wire ke `_layout` |
+| Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, di-wire di root `_layout` |
+| Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, semua lewat RLS |
+| Routing auth-gated | `src/app/_layout.tsx` + `(auth)/` `(app)/` | Stack + guard + Supabase config gate |
+| Layar auth | `src/app/(auth)/{login,register,verify}.tsx` | fungsional, Enter submit, tombol disable |
+| Layar Home / Buat / Join / Login grup | `src/app/(app)/*` | fungsional (recent list, create RPC, join lookup, PIN) |
+| Dashboard grup + Tambah tagihan | `src/app/(app)/group/[id]/*` | **skeleton** — fetch + selector jalan, UI penuh belum |
 
-**Belum dikerjakan:** semua layar/UI, routing auth-gated, repository layer
-(mapping row Supabase ↔ tipe domain), realtime, chart, export Excel/PDF,
-generator reminder di UI. Urutan lanjutan ada di bagian "Langkah berikutnya".
+Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih.
+
+**Belum dikerjakan:** dashboard tab Tagihan/Ringkasan penuh (card per bill,
+expand rincian per orang, chart tren, export Excel/PDF, generator reminder),
+form Tambah tagihan, alur upload bukti + OCR di UI, realtime, polish gaya
+dark/iOS. Urutan di "Langkah berikutnya".
 
 ## Struktur folder
 
 ```
 src/
-  app/                 # expo-router (masih template starter)
-  domain/              # aturan bisnis murni — TIDAK impor React/RN
-    billing.ts         # requiredMembers, maybeAdvanceInstallment, event2, selector
-    money.ts           # parseRupiah / formatRp / toleransi match
-    dates.ts           # monthKey, daysStatus, dll
-    *.test.ts
-  types/models.ts      # tipe domain
+  app/                       # expo-router (file-based)
+    _layout.tsx              # providers + Supabase gate + Stack
+    index.tsx                # redirect: session -> (app), else (auth)/login
+    (auth)/{login,register,verify}.tsx
+    (app)/
+      index.tsx              # Home (recent groups, buat / join)
+      create-group.tsx  join-group.tsx  group-login.tsx (PIN)
+      group/[id]/{index,add-bill}.tsx    # dashboard skeleton
+  domain/                    # aturan bisnis murni — TIDAK impor React/RN
+    billing.ts  money.ts  dates.ts  *.test.ts
+  types/models.ts
   lib/
-    env.ts             # EXPO_PUBLIC_* config
-    supabase.ts        # client + ChunkedSecureStore
+    env.ts  supabase.ts  database.types.ts  mappers.ts
+    groups-repository.ts  bills-repository.ts  payments-repository.ts
+    recent-groups-repository.ts  proofs.ts
   features/
     auth/auth-context.tsx
+    groups/unlocked-groups.ts    # in-memory "PIN sudah dimasukkan" set
+  components/ui/               # Screen, Button, TextField, TextLink, LoadingScreen
+  constants/theme.ts           # palet dark-first (dari prototipe) + kategori
 supabase/
-  migrations/0001_init.sql
-  functions/read-proof/index.ts
+  migrations/0001_init.sql   functions/read-proof/index.ts   config.toml
 docs/
 ```
 
@@ -141,15 +154,20 @@ members atomik, dan nolak kalau email pemanggil nggak ada di `members`.
 - `signIn`, `signOut`, `resendCode` standar.
 - Session persist di `expo-secure-store`, di-chunk 1800 char/key (limit iOS
   ~2KB). Web pakai `localStorage` (default supabase-js).
-
-Belum: wiring `<AuthProvider>` + routing auth-gated di `src/app/_layout.tsx`.
+- `<AuthProvider>` di root `_layout.tsx`. Guard: `(auth)/_layout` redirect ke
+  `(app)` kalau ada session; `(app)/_layout` redirect ke `(auth)/login` kalau
+  nggak. PIN grup = gate UX kedua (`features/groups/unlocked-groups.ts`,
+  in-memory) — RLS yang jaga data beneran.
 
 ## OCR flow
 
-Client (nanti) → upload foto ke Storage → panggil Edge Function `read-proof`
-dengan base64 → function panggil Anthropic vision → balikin `{ amount }` →
-client jalanin `applyProofUpload(bill, record, { ocrAmount, ... })` →
-tulis hasil ke `payments` (+ `bills.paid_count` / `bill_months` kalau berubah).
+Client → upload foto ke Storage (`proofs.ts uploadProof`) → panggil Edge
+Function `read-proof` (`readProof`) dengan base64 → function panggil Anthropic
+vision → balikin `{ amount }` → client jalanin
+`applyProofUpload(bill, record, { ocrAmount, ... })` → `commitBillRecord`
+(tulis `payments` + `bill_months` + `bills.paid_count` kalau berubah).
+Alur status/aksi lain: `applySelfDeclare` / `applyConfirm` / `applyReject` /
+`applyReupload` → `commitBillRecord` / `writeMonthRecord`. UI-nya belum ada.
 
 Key Anthropic **cuma** di secret Edge Function, nggak pernah di bundle app.
 
@@ -165,30 +183,39 @@ npm start        # expo dev server (butuh .env terisi)
 > (`~/.nvm/versions/node/v24.21.0/bin`). Helper `.dev/*.sh` (gitignored) cuma
 > buat nambahin PATH itu.
 
-## Langkah berikutnya (fase layar)
+## Langkah berikutnya
 
-Urutan yang disaranin, ngikut brief:
+Sudah kelar: repository layer, routing, layar auth, Home, Buat/Join/Login grup.
+Sisanya:
 
-1. **Repository layer** (`src/lib/`): `groups-repository.ts`,
-   `bills-repository.ts`, `payments-repository.ts` — mapping row ↔ tipe domain,
-   assemble `Group.monthly` dari `bill_months` + `payments`.
-2. **Routing**: `src/app/_layout.tsx` jadi Stack + `<AuthProvider>`; grup
-   `(auth)` (register/otp/login) dan `(app)` (home/group). Hapus template tabs.
-3. **Layar auth** (brief §1): register, OTP, login. Enter submit, tombol
-   disable sampai valid.
-4. **Home** (brief §2): daftar "Lanjutkan" + duplikat/hapus dari daftar,
-   buat grup / join kode.
-5. **Buat grup** (brief §3) → RPC `create_group`.
-6. **Login grup** (brief §4): auto-deteksi identitas dari email, input PIN,
-   masuk begitu 6 digit benar.
-7. **Tambah tagihan** (brief §5): field tenor muncul kalau kategori Cicilan;
-   tanggal bisa diketik manual.
-8. **Dashboard** (brief §6): tab Tagihan (card per bill, expand rincian) +
-   Ringkasan (kartu "belum bayar" — jangan default "Lunas" kalau belum ada
-   tagihan; chart tren; export; reminder).
-9. **Upload bukti** (brief §7): Storage + Edge Function + alur status; card
-   jangan auto-collapse abis upload.
-10. Polish gaya dark/iOS dari prototipe.
+1. **Tambah tagihan** (brief §5) — form: kategori (ikon+warna, `CategoryColors`/
+   `CategoryIcons`), tanggal jatuh tempo diketik manual, tipe single/split,
+   field `tenor` + toggle "total ÷ tenor" kalau kategori Cicilan, pilih PJ /
+   splitMembers + "transfer ke siapa". Domain-nya (`perInstallmentFromTotal`,
+   dll) udah siap → `insertBill`.
+2. **Dashboard tab Tagihan** (brief §6) — card per bill, expand rincian per
+   orang (`monthlyOverview`, `billBadge`, `billMetaText`, `expectedShare`),
+   "Edit nominal" (PJ only, `canEditNominal` → `updateBillEstimate`).
+3. **Upload bukti + alur status** (brief §7) — image picker → `uploadProof` →
+   `readProof` → `applyProofUpload` → `commitBillRecord`; tombol per status
+   (`review`: "Upload ulang" / "Tandai…"; `awaiting`: PJ "Konfirmasi"/"Tolak").
+   Card jangan auto-collapse.
+4. **Dashboard tab Ringkasan** — kartu "siapa belum bayar" (jangan default
+   "Lunas" kalau `!hasDues`), chart tren (`computeMonthlyCategoryTotals` +
+   `loadAllMonths`), export Excel/PDF, generator teks reminder
+   (`buildReminderText`).
+5. **Lunasi dipercepat** single (`earlyPayoffInfo` / `applyEarlyPayoff`).
+6. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
+7. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi).
 
 Yang ditunda (brief): push/WhatsApp asli, lunasi-dipercepat untuk split,
 fitur agentic.
+
+### Catatan / utang teknis
+
+- Supabase client belum di-generic-type (`Database`) — repo pakai cast manual
+  ke row types. Jalanin `supabase gen types typescript --linked` begitu project
+  ada, lalu balikin `<Database>` di `supabase.ts`.
+- RLS `bills` UPDATE masih lebar (semua anggota). "Edit nominal = PJ only"
+  baru di UI — bisa dikencengin pakai trigger nanti.
+- `app-tabs`, `animated-icon`, dll dari template starter udah dihapus.

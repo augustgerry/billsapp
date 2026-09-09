@@ -7,21 +7,71 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * Palette. The `dark` set is the primary aesthetic (ported from the iOS-dark
+ * look of `kongsi-pilot.html`); `light` mirrors every key so the app stays
+ * theme-aware. Keep both objects key-for-key identical.
+ */
 export const Colors = {
   light: {
     text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
+    background: '#F2F2F7',
+    backgroundElement: '#FFFFFF',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    textFaint: '#8A8A8E',
+    surface: '#FFFFFF',
+    surface2: '#EFEFF4',
+    border: '#D1D1D6',
+    primary: '#0A84FF',
+    primaryText: '#0A6DD8',
+    primaryTint: 'rgba(10,132,255,0.12)',
+    success: '#248A3D',
+    successTint: 'rgba(36,138,61,0.14)',
+    danger: '#D70015',
+    dangerTint: 'rgba(215,0,21,0.12)',
+    gold: '#A05A00',
+    goldTint: 'rgba(160,90,0,0.12)',
   },
   dark: {
-    text: '#ffffff',
+    text: '#FFFFFF',
     background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    backgroundElement: '#1C1C1E',
+    backgroundSelected: '#2C2C2E',
+    textSecondary: '#98989D',
+    textFaint: '#636366',
+    surface: '#1C1C1E',
+    surface2: '#2C2C2E',
+    border: '#38383A',
+    primary: '#0A84FF',
+    primaryText: '#409CFF',
+    primaryTint: 'rgba(10,132,255,0.16)',
+    success: '#32D74B',
+    successTint: 'rgba(50,215,75,0.16)',
+    danger: '#FF453A',
+    dangerTint: 'rgba(255,69,58,0.16)',
+    gold: '#FF9F0A',
+    goldTint: 'rgba(255,159,10,0.16)',
   },
+} as const;
+
+/** Icon + accent colour per bill category (matches the prototype). */
+export const CategoryColors = {
+  Listrik: '#0A84FF',
+  Air: '#64D2FF',
+  WiFi: '#BF5AF2',
+  'Tagihan Rumah': '#FF9F0A',
+  Cicilan: '#8E8E93',
+  Lainnya: '#98989D',
+} as const;
+
+export const CategoryIcons = {
+  Listrik: '⚡',
+  Air: '💧',
+  WiFi: '📶',
+  'Tagihan Rumah': '🏠',
+  Cicilan: '💳',
+  Lainnya: '📄',
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
