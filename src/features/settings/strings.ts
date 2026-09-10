@@ -51,8 +51,8 @@ export const STRINGS = {
   // --- auth: register ---
   'register.title': { id: 'Daftar', en: 'Sign up' },
   'register.subtitle': {
-    id: 'Buat akun buat mulai pakai Kongsi.',
-    en: 'Create an account to start using Kongsi.',
+    id: 'Buat akun untuk mulai pakai Kongsi.',
+    en: 'Create an account to get started with Kongsi.',
   },
   'register.emailInvalid': {
     id: 'Masukkan email yang valid.',
@@ -64,7 +64,7 @@ export const STRINGS = {
     en: 'Password must be at least 6 characters.',
   },
   'register.phoneLabel': { id: 'Nomor HP', en: 'Phone number' },
-  'register.phoneInvalid': { id: 'Nomor HP nggak valid.', en: 'Invalid phone number.' },
+  'register.phoneInvalid': { id: 'Nomor HP belum valid.', en: 'That phone number looks off.' },
   'register.submit': { id: 'Daftar', en: 'Sign up' },
   'register.haveAccount': { id: 'Sudah punya akun? ', en: 'Already have an account? ' },
   'register.login': { id: 'Masuk', en: 'Sign in' },
@@ -95,8 +95,8 @@ export const STRINGS = {
 
   // --- home ---
   'home.tagline': {
-    id: 'Kelola tagihan rumah tangga bareng — siapa bayar apa, siapa belum setor.',
-    en: 'Manage household bills together — who pays what, who still owes.',
+    id: 'Tagihan rumah, diurus bareng. Jelas siapa bayar apa, siapa belum.',
+    en: "Household bills, handled together. Clear on who's paid and who hasn't.",
   },
   'home.invites': { id: 'UNDANGAN', en: 'INVITES' },
   'home.accept': { id: 'Terima', en: 'Accept' },
@@ -120,13 +120,13 @@ export const STRINGS = {
     en: 'Remove {name} from the list?',
   },
   'home.removeBody': {
-    id: 'Grupnya nggak dihapus — cuma hilang dari daftar Lanjutkan di HP ini.',
+    id: 'Grupnya tidak dihapus — hanya hilang dari daftar Lanjutkan di HP ini.',
     en: "The group isn't deleted — it just leaves the Continue list on this phone.",
   },
   'home.duplicateTitle': { id: 'Duplikat grup', en: 'Duplicate group' },
   'home.duplicateBody': {
-    id: 'Bikin grup baru dengan anggota yang sama, tanpa tagihan. Anggota lain akan diundang ulang.',
-    en: 'Creates a new group with the same members and no bills. The others get re-invited.',
+    id: 'Buat grup baru dengan anggota yang sama, tanpa tagihan. Anggota lain akan diundang ulang.',
+    en: 'Creates a new group with the same members and no bills. Everyone else gets re-invited.',
   },
   'home.copySuffix': { id: '{name} (Salinan)', en: '{name} (Copy)' },
 
@@ -144,20 +144,20 @@ export const STRINGS = {
 
   // --- create group ---
   'create.subtitle': {
-    id: 'Untuk pasangan atau keluarga yang urus tagihan bareng.',
-    en: 'For couples or families sharing household bills.',
+    id: 'Untuk pasangan atau keluarga yang mengatur tagihan bersama.',
+    en: 'For couples or families who split the household bills.',
   },
   'create.groupName': { id: 'Nama grup', en: 'Group name' },
   'create.groupNamePlaceholder': { id: 'Contoh: Rumah Kita', en: 'e.g. Our Home' },
   'create.membersLabel': {
-    id: 'Anggota (min. 2) — nama & email dipakai buat login otomatis',
+    id: 'Anggota (min. 2) — nama & email dipakai untuk login otomatis',
     en: 'Members (min. 2) — name & email are used for auto sign-in',
   },
   'create.memberName': { id: 'Nama anggota', en: 'Member name' },
   'create.memberEmail': { id: 'Email anggota', en: 'Member email' },
   'create.addMember': { id: '+ Tambah anggota', en: '+ Add member' },
   'create.pinLabel': {
-    id: 'PIN grup (6 digit, dipakai semua anggota buat masuk)',
+    id: 'PIN grup (6 digit, dipakai semua anggota untuk masuk)',
     en: 'Group PIN (6 digits, used by everyone to enter)',
   },
   'create.needSelf': {
@@ -175,11 +175,11 @@ export const STRINGS = {
   'join.codeLabel': { id: 'Kode grup', en: 'Group code' },
   'join.codePlaceholder': { id: 'Contoh: 7XQP2', en: 'e.g. 7XQP2' },
   'join.notMember': {
-    id: 'Email kamu ({email}) belum terdaftar sebagai anggota grup {name}. Minta admin buat menambahkan email kamu.',
+    id: 'Email kamu ({email}) belum terdaftar sebagai anggota grup {name}. Minta admin untuk menambahkan email kamu.',
     en: 'Your email ({email}) is not listed as a member of {name}. Ask the admin to add your email.',
   },
   'join.invited': {
-    id: 'Kamu diundang ke grup {name} sebagai {member}. Terima undangannya buat gabung.',
+    id: 'Kamu diundang ke grup {name} sebagai {member}. Terima undangannya untuk gabung.',
     en: 'You were invited to {name} as {member}. Accept the invite to join.',
   },
   'join.acceptContinue': { id: 'Terima & lanjut', en: 'Accept & continue' },
@@ -200,7 +200,7 @@ export const STRINGS = {
     en: "You were invited to this group but haven't accepted yet. Go to Home and accept the invite.",
   },
   'groupLogin.notMember': {
-    id: 'Email kamu ({email}) belum terdaftar sebagai anggota grup ini. Minta admin buat menambahkan email kamu.',
+    id: 'Email kamu ({email}) belum terdaftar sebagai anggota grup ini. Minta admin untuk menambahkan email kamu.',
     en: 'Your email ({email}) is not a member of this group. Ask the admin to add your email.',
   },
   'groupLogin.title': { id: 'Masuk ke {name}', en: 'Enter {name}' },
@@ -243,12 +243,12 @@ export const STRINGS = {
   'dash.suspiciousTitle': { id: 'Perlu dicek teliti', en: 'Check carefully' },
   'dash.reviewTitle': { id: 'Perlu dicek', en: 'Needs a check' },
   'dash.reviewBody': {
-    id: 'Nominal di bukti nggak kebaca / beda dari yang diharapkan. Cek lalu tandai kalau memang sudah bayar.',
-    en: "The amount couldn't be read / differs from expected. Check it, then mark as paid if it's correct.",
+    id: 'Nominal di bukti tidak terbaca atau berbeda dari yang diharapkan. Periksa dulu, lalu tandai lunas kalau memang sudah benar.',
+    en: "The amount couldn't be read, or it differs from what's expected. Check it, then mark it paid if it's correct.",
   },
   'dash.amountDiffTitle': { id: 'Nominal beda', en: 'Amount mismatch' },
   'dash.amountDiffBody': {
-    id: 'Nominal di bukti nggak cocok sama sisa cicilan. Coba lagi.',
+    id: 'Nominal di bukti belum cocok dengan sisa cicilan. Coba lagi.',
     en: "The amount doesn't match the remaining installments. Try again.",
   },
   'dash.summaryTodo': {
@@ -379,8 +379,8 @@ export const STRINGS = {
 
   // --- generic export ---
   'export.noData': {
-    id: 'Belum ada data buat diekspor.',
-    en: 'No data to export yet.',
+    id: 'Belum ada data untuk diekspor.',
+    en: 'Nothing to export yet.',
   },
 } satisfies Record<string, Entry>;
 

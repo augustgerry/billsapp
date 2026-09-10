@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   code: { fontSize: 13, fontWeight: '700', letterSpacing: 1 },
   members: { marginTop: -Spacing.two },
-  hero: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
+  hero: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
   blockTitle: { fontSize: 16, fontWeight: '700' },
   exportRow: { flexDirection: 'row', gap: Spacing.two },
   flex1: { flex: 1 },

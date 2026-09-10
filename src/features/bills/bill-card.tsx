@@ -285,7 +285,9 @@ export function BillCard({
   }
 
   return (
-    <View style={[styles.card, { borderColor: c.border }]}>
+    <View
+      style={[styles.card, { backgroundColor: c.surface, borderColor: c.border }]}
+    >
       <Pressable onPress={() => setOpen((v) => !v)} style={styles.header}>
         <CategoryIcon category={bill.category} />
         <View style={styles.headerBody}>
@@ -398,7 +400,11 @@ export function BillCard({
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

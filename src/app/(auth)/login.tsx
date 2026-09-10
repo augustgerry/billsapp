@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Wordmark } from '@/components/brand/wordmark';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
@@ -37,7 +38,10 @@ export default function LoginScreen() {
 
   return (
     <Screen>
-      <ThemedText type="subtitle">{t('login.title')}</ThemedText>
+      <Wordmark size={26} />
+      <ThemedText type="subtitle" style={styles.title}>
+        {t('login.title')}
+      </ThemedText>
       <ThemedText themeColor="textSecondary">{t('login.subtitle')}</ThemedText>
 
       <View style={styles.form}>
@@ -84,6 +88,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  title: { marginTop: Spacing.two },
   form: { gap: Spacing.three, marginTop: Spacing.two },
   foot: { textAlign: 'center', marginTop: Spacing.three },
 });

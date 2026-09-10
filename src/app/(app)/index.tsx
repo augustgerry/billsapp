@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import { Wordmark } from '@/components/brand/wordmark';
 import { ActionSheet } from '@/components/ui/action-sheet';
 import { Button } from '@/components/ui/button';
 import { PromptDialog } from '@/components/ui/prompt-dialog';
@@ -131,9 +132,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={styles.topbar}>
-        <ThemedText themeColor="textFaint" style={styles.email}>
-          {email}
-        </ThemedText>
+        <Wordmark />
         <Pressable
           onPress={() => router.push('/(app)/settings')}
           accessibilityRole="button"
@@ -144,8 +143,14 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <ThemedText type="subtitle">Kongsi</ThemedText>
-      <ThemedText themeColor="textSecondary">{t('home.tagline')}</ThemedText>
+      <ThemedText themeColor="textSecondary" style={styles.tagline}>
+        {t('home.tagline')}
+      </ThemedText>
+      {email ? (
+        <ThemedText themeColor="textFaint" style={styles.email}>
+          {email}
+        </ThemedText>
+      ) : null}
 
       {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
 
@@ -300,15 +305,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  email: { fontSize: 12, flexShrink: 1 },
-  section: { gap: Spacing.two, marginTop: Spacing.two },
+  tagline: { fontSize: 14, lineHeight: 20, marginTop: -Spacing.one },
+  email: { fontSize: 12 },
+  section: { gap: Spacing.two, marginTop: Spacing.three },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
     padding: Spacing.three,
-    borderRadius: 12,
+    borderRadius: 16,
   },
   recentName: { fontSize: 15, fontWeight: '600', flex: 1 },
   recentCode: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
@@ -327,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.three,
-    borderRadius: 12,
+    borderRadius: 16,
     gap: Spacing.two,
   },
   inviteActions: { flexDirection: 'row', gap: Spacing.three },
