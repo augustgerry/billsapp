@@ -18,7 +18,9 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 | Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, typed, semua lewat RLS |
 | Push notifications | `src/features/notifications/*` | token registration + notify-proof caller — butuh dev build (lihat docs/PUSH_SETUP.md) |
 | Realtime | `src/features/groups/use-group-realtime.ts` | dashboard auto-refresh pas anggota lain update |
-| Tema | `src/features/settings/theme-preference.tsx` | Terang/Gelap/Ikuti Sistem, persist SecureStore; light palette di `constants/theme.ts` |
+| Tema | `src/features/settings/theme-preference.tsx` | Terang/Gelap/Ikuti Sistem, persist SecureStore. Accent = **gold** (`#D6AE52` / `#9C7A1E`), `primaryOn` buat teks di tombol gold |
+| Bahasa | `src/features/settings/{locale,strings}.tsx` | id/en toggle di Settings, persist SecureStore. Domain display strings terima arg `locale` |
+| Undangan anggota | `group_members.status` + RPC `list_my_invites`/`respond_to_invite` | pending → active; section "Undangan" di Home |
 | Routing auth-gated | `src/app/_layout.tsx` + `(auth)/` `(app)/` | Stack + guard + Supabase config gate |
 | Layar auth | `src/app/(auth)/{login,register,verify}.tsx` | fungsional, Enter submit, tombol disable |
 | Layar Home / Buat / Join / Login grup | `src/app/(app)/*` | fungsional (recent list, create RPC, join lookup, PIN) |
@@ -188,8 +190,9 @@ npm start        # expo dev server (butuh .env terisi)
 
 ## Langkah berikutnya
 
-Semua item brief + 5 penambahan (OCR anti-fraud, push, realtime, light mode,
-hardening) sudah kelar. Sisanya:
+Semua item brief + penambahan (OCR anti-fraud, push, realtime, light mode,
+hardening, gold accent, auto-kapital, keyboard "Selesai", undangan anggota,
+badge Lanjutkan, Nomor HP + kode negara, i18n id/en) sudah kelar. Sisanya:
 
 1. **Top-up kredit Anthropic** — function jalan tapi API balikin "credit
    balance too low". Sampai di-isi, upload bukti masuk `review` (nggak
@@ -215,5 +218,8 @@ fitur agentic.
   tahan banting.
 - "Member lain yang relevan" belum di-fan-out — cuma PJ.
 - Gambar bukti belum di-resize (cuma `quality: 0.6` di picker).
+- i18n: nama kategori tagihan tetap Indonesia (DB enum); body push notif
+  (`notify-proof`) tetap Indonesia — belum ikut locale user.
+- `@types/node`/`node --test` warning `MODULE_TYPELESS_PACKAGE_JSON` — kosmetik.
 - Migrasi lokal diedit in-place beberapa kali; `supabase db reset` bakal
   replay bener. Fungsi/skema di DB live udah sinkron.
