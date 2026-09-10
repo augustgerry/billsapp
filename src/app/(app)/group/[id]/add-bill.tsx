@@ -113,12 +113,8 @@ export default function AddBillScreen() {
 
   // Point 5: pending members (invited, not yet accepted) are still selectable
   // as PJ / split members so a bill can be created without waiting on everyone.
+  // They're shown exactly like active members here — no "invited" tag.
   const members = group.members.map((m) => m.name);
-  const pending = new Set(
-    group.members.filter((m) => m.status === 'pending').map((m) => m.name),
-  );
-  const memberLabel = (m: string) =>
-    pending.has(m) ? `${m} · ${t('bill.invitedTag')}` : m;
 
   const isCicilan = category === 'Cicilan';
   const tenorN = parseInt(tenor, 10);
@@ -316,7 +312,7 @@ export default function AddBillScreen() {
             {members.map((m) => (
               <Chip
                 key={m}
-                label={memberLabel(m)}
+                label={m}
                 active={responsible === m}
                 onPress={() => setResponsible(m)}
               />
@@ -332,7 +328,7 @@ export default function AddBillScreen() {
             {members.map((m) => (
               <Chip
                 key={m}
-                label={memberLabel(m)}
+                label={m}
                 active={splitMembers.includes(m)}
                 onPress={() => toggleSplitMember(m)}
               />
@@ -347,7 +343,7 @@ export default function AddBillScreen() {
                 {splitMembers.map((m) => (
                   <Chip
                     key={m}
-                    label={memberLabel(m)}
+                    label={m}
                     active={payer === m}
                     onPress={() => setPayer(m)}
                   />

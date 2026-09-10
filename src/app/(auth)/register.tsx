@@ -51,8 +51,10 @@ export default function RegisterScreen() {
           pathname: '/(auth)/verify',
           params: { email: email.trim().toLowerCase() },
         });
-        setBusy(false);
       }
+      // When "Confirm email" is off, signUp returns a live session and the
+      // auth layout redirects straight to the app — nothing to do here.
+      setBusy(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('register.failed'));
       setBusy(false);

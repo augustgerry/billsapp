@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { freshChannel } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -40,8 +41,7 @@ export function useGroupRealtime(
       return r.group_id === groupId || billIdSet.current.has(r.bill_id ?? '');
     };
 
-    const channel = supabase
-      .channel(`group-${groupId}`)
+    const channel = freshChannel(`group-${groupId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'payments' },

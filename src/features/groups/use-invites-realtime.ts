@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { normalizeEmail } from '@/domain/email';
+import { freshChannel } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -27,8 +28,7 @@ export function useInvitesRealtime(
       timer = setTimeout(() => onChangeRef.current(), 400);
     };
 
-    const channel = supabase
-      .channel(`invites-${mail}`)
+    const channel = freshChannel(`invites-${mail}`)
       .on(
         'postgres_changes',
         {

@@ -302,7 +302,6 @@ export const STRINGS = {
   },
   'bill.submit': { id: 'Simpan tagihan', en: 'Save bill' },
   'bill.saveFailed': { id: 'Gagal menyimpan tagihan', en: 'Failed to save the bill' },
-  'bill.invitedTag': { id: 'diundang', en: 'invited' },
 
   // --- bill card ---
   'card.paid': { id: 'Lunas', en: 'Paid' },

@@ -158,7 +158,11 @@ function writeSolid(name, size, rgb) {
 }
 
 write('icon.png', 1024, { bg: true, mark: 0.28 });
+// Splash marks sit on the app's own background (see app.json) so the launch
+// flows straight into the first screen with no colour clash: dark ink for the
+// light splash, brand yellow for the dark one.
 write('splash-icon.png', 512, { bg: false, mark: 0.34 });
+write('splash-icon-dark.png', 512, { bg: false, mark: 0.34, inkColor: YELLOW });
 write('android-icon-foreground.png', 1024, { bg: false, mark: 0.2 });
 write('android-icon-monochrome.png', 1024, {
   bg: false,

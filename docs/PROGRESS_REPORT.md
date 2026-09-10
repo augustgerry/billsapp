@@ -125,11 +125,42 @@ nama kategori + body push notif, notif fan-out ke non-PJ.
 - **13** Kartu diseragamkan (surface + hairline + radius 16), field fokus
   dapat border aksen, Screen sembunyiin scroll indicator.
 
+## Batch "testing feedback #3" (2026-09-11)
+
+- **Bug 2 & 3 — render error "cannot add postgres_changes callbacks … after
+  `subscribe()`"** (`use-group-realtime.ts` pas buat bill / balik dari
+  Ringkasan). Akarnya: `supabase.channel(topic)` balikin channel yang **udah
+  ada** kalau topic-nya sama, dan `removeChannel()` async — jadi mount kedua
+  (bounce lewat group-login, pindah tab, Fast Refresh) narik channel yang udah
+  `subscribe()` lalu manggil `.on()` → throw. Fix: `freshChannel()`
+  (`src/lib/realtime.ts`) kasih topic unik per mount. Kena juga di
+  `use-invites-realtime.ts`. Regression test: `group-realtime.rtest.tsx`.
+- **Kosmetik 1** — tag "· diundang" di form Tambah tagihan dihapus; anggota
+  pending tampil sama persis kayak anggota aktif (tetap bisa dipilih).
+  Key i18n `bill.invitedTag` dibuang.
+- **Kosmetik 2** — splash screen. Background `#FACC15` kuning terang diganti
+  jadi warna background app (`#F6F6F4` light / `#0B0B0C` dark) + mark
+  theme-aware (`splash-icon-dark.png` kuning buat dark). Sekarang splash
+  nyambung mulus ke layar pertama, nggak ada kilatan kuning yang nabrak sama
+  teks "Kongsi" putih pas fade. Accent kuning app **nggak** diubah (sesuai
+  permintaan) — tetap `#EAB308` / `#FACC15`.
+- **Bug 1 — sign up nggak ada OTP + "JWT issued at future"**: dua-duanya
+  config/lingkungan, bukan bug kode. Ditambahin ke troubleshooting
+  `docs/SUPABASE_SETUP.md`:
+  - OTP: nyalain "Confirm email" di dashboard + template harus ada
+    `{{ .Token }}` + SMTP default cuma kirim ke email tim (pasang custom SMTP).
+  - "JWT issued at future": jam device/emulator meleset — set Date & time ke
+    Automatic. (Register screen dirapihin: `setBusy(false)` jalan juga di jalur
+    tanpa verifikasi.)
+- Brief **poin 8** (gold muted `#D6AE52`/`#9C7A1E`) sengaja **tidak**
+  diterapin — di-override sama rebrand kuning batch #2, dikonfirmasi user
+  tetap kuning terang.
+
 ## Cara jalanin
 
 ```bash
 npm test            # 58 domain test (tsx)
-npm run test:render # 7 render smoke test (jest-expo)
+npm run test:render # 9 render smoke test (jest-expo)
 npm run typecheck   # bersih
 npm start           # atau: npx expo start --tunnel
 ```

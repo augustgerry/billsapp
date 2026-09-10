@@ -141,8 +141,9 @@ test('pending members are selectable as PJ (point 5)', async () => {
   renderScreen();
   await waitFor(() => screen.getByText('Nama tagihan'));
   await tap('Listrik');
-  // Nina is a pending member — she must still show up, tagged "diundang"
-  await waitFor(() => screen.getByText('Nina · diundang'));
+  // Nina is a pending member — she must still show up, with no "invited" tag
+  await waitFor(() => screen.getByText('Nina'));
+  expect(screen.queryByText(/diundang|invited/)).toBeNull();
 });
 
 test('the installment branch renders without a render error', async () => {

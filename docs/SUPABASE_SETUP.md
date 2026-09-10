@@ -120,3 +120,6 @@ select * from bills;             -- harus kosong
 | Edge Function 500 "ANTHROPIC_API_KEY not configured" | `supabase secrets set` belum jalan / belum re-deploy |
 | `create_group` error "Email kamu harus termasuk..." | email login nggak ada di list anggota (by design) |
 | RLS "infinite recursion detected" | `is_group_member` kehilangan `security definer` — cek migrasi ke-apply utuh |
+| Abis sign up langsung masuk, nggak ada layar OTP | "Confirm email" di dashboard OFF → `signUp` balikin session langsung. Nyalain "Confirm email" (langkah 5) biar `verify` muncul. |
+| OTP nggak pernah nyampe email | (1) template belum ada `{{ .Token }}`; (2) default SMTP Supabase cuma kirim ke email anggota tim + rate-limit ketat — pasang custom SMTP buat testing beneran. |
+| "JWT issued at future" / auth-js warning "issued in the future? Check the device clock" | Jam device/emulator meleset. Android emulator: Settings → System → Date & time → **Automatic**. Fisik: samain jam. Bukan bug app — token ditandatangani server, ditolak kalau `iat` > jam pemeriksa. |
