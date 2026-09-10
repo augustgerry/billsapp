@@ -558,15 +558,25 @@ test('buildReminderText lists the unpaid, else the all-clear line', () => {
   assert.match(clear, /sudah beres/);
 });
 
-test('billBadge: done > settled > overdue > due', () => {
+test('billBadge: installment-done > settled > unpaid; countdown is installment-only', () => {
   const now = new Date(2026, 8, 10, 12, 0, 0);
   assert.equal(billBadge(cicilanSingle({ paidCount: 12 }), emptyRecord(), now).kind, 'installment-done');
   assert.equal(
     billBadge(splitBill(), paidRecord(['Kaka', 'Nina'], 100000), now).kind,
     'paid',
   );
-  assert.equal(billBadge(singleBill({ dueDay: 5 }), emptyRecord(), now).kind, 'overdue');
-  assert.equal(billBadge(singleBill({ dueDay: 25 }), emptyRecord(), now).kind, 'due');
+  // non-installment bills never show a due-date countdown, only paid / not paid
+  assert.equal(billBadge(singleBill({ dueDay: 5 }), emptyRecord(), now).kind, 'unpaid');
+  assert.equal(billBadge(singleBill({ dueDay: 25 }), emptyRecord(), now).kind, 'unpaid');
+  // installments still show overdue / due
+  assert.equal(
+    billBadge(cicilanSingle({ dueDay: 5, paidCount: 2 }), emptyRecord(), now).kind,
+    'overdue',
+  );
+  assert.equal(
+    billBadge(cicilanSingle({ dueDay: 25, paidCount: 2 }), emptyRecord(), now).kind,
+    'due',
+  );
 });
 
 test('currentInstallmentNumber / applyEditNominal / readMonthRecord', () => {

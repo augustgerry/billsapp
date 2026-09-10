@@ -7,14 +7,13 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { isValidEmail } from '@/domain/email';
 import { toTitleCase } from '@/domain/text';
 import { useAuth } from '@/features/auth/auth-context';
 import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import { createGroup } from '@/lib/groups-repository';
 import { touchRecentGroup } from '@/lib/recent-groups-repository';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Row {
   name: string;
@@ -37,7 +36,7 @@ export default function CreateGroupScreen() {
   const filled = rows.filter((r) => r.name.trim() || r.email.trim());
   const membersOk =
     filled.length >= 2 &&
-    filled.every((r) => r.name.trim() && EMAIL_RE.test(r.email.trim()));
+    filled.every((r) => r.name.trim() && isValidEmail(r.email));
   const valid = name.trim().length > 0 && /^\d{6}$/.test(pin) && membersOk;
   const includesMe = filled.some(
     (r) => r.email.trim().toLowerCase() === (myEmail ?? '').toLowerCase(),
@@ -108,6 +107,11 @@ export default function CreateGroupScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            error={
+              row.email.trim().length > 0 && !isValidEmail(row.email)
+                ? t('register.emailInvalid')
+                : undefined
+            }
           />
         </View>
       ))}

@@ -348,7 +348,7 @@ export type Database = {
       current_email: { Args: never; Returns: string }
       current_member_name: { Args: { gid: string }; Returns: string }
       duplicate_group: {
-        Args: { p_group_id: string }
+        Args: { p_group_id: string; p_name?: string }
         Returns: {
           code: string
           created_at: string

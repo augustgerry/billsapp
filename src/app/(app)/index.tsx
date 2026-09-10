@@ -3,12 +3,15 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import { ActionSheet } from '@/components/ui/action-sheet';
 import { Button } from '@/components/ui/button';
+import { PromptDialog } from '@/components/ui/prompt-dialog';
 import { Screen } from '@/components/ui/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
-import { useT } from '@/features/settings/locale';
+import { useInvitesRealtime } from '@/features/groups/use-invites-realtime';
+import { useLocale } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import { countGroupAttention } from '@/lib/attention-repository';
 import {
@@ -27,12 +30,14 @@ import {
 export default function HomeScreen() {
   const { email } = useAuth();
   const c = useTheme();
-  const t = useT();
+  const { t } = useLocale();
   const [recents, setRecents] = useState<RecentGroupItem[] | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [attention, setAttention] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [busyInvite, setBusyInvite] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<RecentGroupItem | null>(null);
+  const [renameFor, setRenameFor] = useState<RecentGroupItem | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -61,6 +66,9 @@ export default function HomeScreen() {
     }, [load]),
   );
 
+  // Point 4: a fresh invite lands here without a manual refresh.
+  useInvitesRealtime(email, load);
+
   function openGroup(item: { groupId: string; name: string }) {
     router.push({
       pathname: '/(app)/group-login',
@@ -85,23 +93,9 @@ export default function HomeScreen() {
     }
   }
 
-  function rowActions(item: RecentGroupItem) {
-    Alert.alert(item.name, undefined, [
-      {
-        text: t('home.duplicate'),
-        onPress: async () => {
-          try {
-            const { groupId } = await duplicateGroup(item.groupId);
-            await touchRecentGroup(groupId);
-            load();
-          } catch (e) {
-            Alert.alert(
-              t('common.failed'),
-              e instanceof Error ? e.message : t('common.retry'),
-            );
-          }
-        },
-      },
+  function confirmRemove(item: RecentGroupItem) {
+    Alert.alert(t('home.removeTitle', { name: item.name }), t('home.removeBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('home.removeFromList'),
         style: 'destructive',
@@ -117,8 +111,21 @@ export default function HomeScreen() {
           }
         },
       },
-      { text: t('common.cancel'), style: 'cancel' },
     ]);
+  }
+
+  async function doDuplicate(item: RecentGroupItem, name: string) {
+    setRenameFor(null);
+    try {
+      const { groupId } = await duplicateGroup(item.groupId, name);
+      await touchRecentGroup(groupId);
+      load();
+    } catch (e) {
+      Alert.alert(
+        t('common.failed'),
+        e instanceof Error ? e.message : t('common.retry'),
+      );
+    }
   }
 
   return (
@@ -189,7 +196,7 @@ export default function HomeScreen() {
               <Pressable
                 key={item.groupId}
                 onPress={() => openGroup(item)}
-                onLongPress={() => rowActions(item)}
+                onLongPress={() => setMenuFor(item)}
                 style={({ pressed }) => [
                   styles.recentRow,
                   { backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 },
@@ -206,12 +213,22 @@ export default function HomeScreen() {
                 <ThemedText themeColor="textFaint" style={styles.recentCode}>
                   {item.code}
                 </ThemedText>
+                <Pressable
+                  onPress={() => setMenuFor(item)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home.rowMenu', { name: item.name })}
+                  style={styles.kebab}
+                >
+                  <Ionicons
+                    name="ellipsis-vertical"
+                    size={18}
+                    color={c.textFaint}
+                  />
+                </Pressable>
               </Pressable>
             );
           })}
-          <ThemedText themeColor="textFaint" style={styles.hint}>
-            {t('home.longPressHint')}
-          </ThemedText>
         </View>
       ) : null}
 
@@ -229,6 +246,50 @@ export default function HomeScreen() {
           onPress={() => router.push('/(app)/join-group')}
         />
       </View>
+
+      <ActionSheet
+        visible={!!menuFor}
+        title={menuFor?.name}
+        onClose={() => setMenuFor(null)}
+        actions={
+          menuFor
+            ? [
+                {
+                  key: 'duplicate',
+                  label: t('home.duplicate'),
+                  icon: (
+                    <Ionicons
+                      name="copy-outline"
+                      size={20}
+                      color={c.textSecondary}
+                    />
+                  ),
+                  onPress: () => setRenameFor(menuFor),
+                },
+                {
+                  key: 'remove',
+                  label: t('home.removeFromList'),
+                  destructive: true,
+                  icon: (
+                    <Ionicons name="trash-outline" size={20} color={c.danger} />
+                  ),
+                  onPress: () => confirmRemove(menuFor),
+                },
+              ]
+            : []
+        }
+      />
+
+      <PromptDialog
+        visible={!!renameFor}
+        title={t('home.duplicateTitle')}
+        message={t('home.duplicateBody')}
+        placeholder={t('create.groupNamePlaceholder')}
+        initialValue={renameFor ? t('home.copySuffix', { name: renameFor.name }) : ''}
+        confirmLabel={t('home.duplicate')}
+        onCancel={() => setRenameFor(null)}
+        onConfirm={(name) => renameFor && doDuplicate(renameFor, name)}
+      />
     </Screen>
   );
 }
@@ -245,13 +306,13 @@ const styles = StyleSheet.create({
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: 12,
   },
   recentName: { fontSize: 15, fontWeight: '600', flex: 1 },
   recentCode: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  hint: { fontSize: 12 },
+  kebab: { padding: 2, marginRight: -4 },
   badge: {
     minWidth: 20,
     height: 20,
@@ -259,7 +320,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.two,
   },
   badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   inviteRow: {

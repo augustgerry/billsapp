@@ -8,49 +8,51 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 /**
- * Palette. Accent is a muted, warm gold (Tricount-inspired). `primaryOn` is the
- * dark ink to place on a solid gold surface — never white, for contrast.
+ * Palette. Accent is a bright, confident yellow — Kongsi's brand colour.
+ * `primary` is the fill on solid buttons/toggles; `primaryText` is the darker,
+ * AA-legible shade for accent text and links on the page background;
+ * `primaryOn` is the near-black ink placed on a solid yellow surface.
  *
- * Status colours (`success`/`danger`/`gold`) and `CategoryColors` are semantic
- * and stay distinct from the accent so "action" never reads as "status".
- * Keep both objects key-for-key identical.
+ * Status colours (`success` = green, `danger` = red, `gold` = amber/warning)
+ * and `CategoryColors` are semantic and stay distinct from the brand yellow so
+ * "action" never reads as "status". Keep both objects key-for-key identical.
  */
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#F2F2F7',
+    text: '#1A1A1A',
+    background: '#F6F6F4',
     backgroundElement: '#FFFFFF',
-    backgroundSelected: '#E5E5EA',
+    backgroundSelected: '#ECECEA',
     textSecondary: '#55555B',
     textFaint: '#8E8E93',
     surface: '#FFFFFF',
-    surface2: '#ECECF1',
-    border: '#D6D6DC',
-    primary: '#9C7A1E',
-    primaryText: '#8A6B18',
-    primaryTint: 'rgba(156,122,30,0.12)',
-    primaryOn: '#1C1C1E',
+    surface2: '#EFEFEC',
+    border: '#E1E1DC',
+    primary: '#EAB308',
+    primaryText: '#7A5D00',
+    primaryTint: 'rgba(234,179,8,0.14)',
+    primaryOn: '#1A1A1A',
     success: '#1E7A34',
     successTint: 'rgba(30,122,52,0.13)',
     danger: '#CE0016',
     dangerTint: 'rgba(206,0,22,0.10)',
-    gold: '#A85800',
-    goldTint: 'rgba(168,88,0,0.12)',
+    gold: '#B25000',
+    goldTint: 'rgba(178,80,0,0.12)',
   },
   dark: {
-    text: '#FFFFFF',
-    background: '#000000',
+    text: '#F5F5F4',
+    background: '#0B0B0C',
     backgroundElement: '#1C1C1E',
     backgroundSelected: '#2C2C2E',
     textSecondary: '#98989D',
     textFaint: '#636366',
-    surface: '#1C1C1E',
-    surface2: '#2C2C2E',
+    surface: '#1A1A1C',
+    surface2: '#28282A',
     border: '#38383A',
-    primary: '#D6AE52',
-    primaryText: '#D6AE52',
-    primaryTint: 'rgba(214,174,82,0.16)',
-    primaryOn: '#1C1C1E',
+    primary: '#FACC15',
+    primaryText: '#FACC15',
+    primaryTint: 'rgba(250,204,21,0.16)',
+    primaryOn: '#1A1A1A',
     success: '#32D74B',
     successTint: 'rgba(50,215,75,0.16)',
     danger: '#FF453A',
@@ -83,14 +85,11 @@ export const CategoryColors = {
   },
 } as const;
 
-export const CategoryIcons = {
-  Listrik: '⚡',
-  Air: '💧',
-  WiFi: '📶',
-  'Tagihan Rumah': '🏠',
-  Cicilan: '💳',
-  Lainnya: '📄',
-} as const;
+/**
+ * Point 8: every category shows the SAME glyph — the colour of the disc it
+ * sits in (see `CategoryColors` + `<CategoryIcon>`) is the only differentiator.
+ */
+export const CATEGORY_ICON = 'receipt-outline' as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 

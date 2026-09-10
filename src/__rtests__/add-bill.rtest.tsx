@@ -113,7 +113,6 @@ test('a single (non-installment) bill can be filled and submitted', async () => 
   await type('Contoh: Listrik, Internet, Cicilan Motor', 'listrik');
   await tap('Listrik');
   await tap('Gerry');
-  await type('1-31', '20');
   await type('Rp.300.000', '300000');
   await tap('Simpan tagihan');
 
@@ -126,8 +125,24 @@ test('a single (non-installment) bill can be filled and submitted', async () => 
     type: 'single',
     responsible: 'Gerry',
     estimate: 300000,
-    dueDay: 20,
   });
+});
+
+test('non-installment bills have no due-date field (point 6)', async () => {
+  renderScreen();
+  await waitFor(() => screen.getByText('Nama tagihan'));
+  await tap('Listrik');
+  expect(screen.queryByPlaceholderText('1-31')).toBeNull();
+  await tap('Cicilan');
+  await waitFor(() => screen.getByPlaceholderText('1-31'));
+});
+
+test('pending members are selectable as PJ (point 5)', async () => {
+  renderScreen();
+  await waitFor(() => screen.getByText('Nama tagihan'));
+  await tap('Listrik');
+  // Nina is a pending member — she must still show up, tagged "diundang"
+  await waitFor(() => screen.getByText('Nina · diundang'));
 });
 
 test('the installment branch renders without a render error', async () => {

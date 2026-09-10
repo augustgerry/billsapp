@@ -16,9 +16,8 @@ import {
   type Country,
 } from '@/features/auth/country-codes';
 import { PhoneField } from '@/features/auth/phone-field';
+import { isValidEmail } from '@/domain/email';
 import { useT } from '@/features/settings/locale';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
@@ -31,7 +30,7 @@ export default function RegisterScreen() {
   const [busy, setBusy] = useState(false);
   const pwRef = useRef<TextInput>(null);
 
-  const emailOk = EMAIL_RE.test(email.trim());
+  const emailOk = isValidEmail(email);
   const passOk = password.length >= 6;
   const phoneOk = isValidLocalNumber(phone);
   const valid = emailOk && passOk && phoneOk;

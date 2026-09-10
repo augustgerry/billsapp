@@ -29,6 +29,7 @@ import type {
   PaymentStatus,
 } from '../types/models';
 import type { Locale } from './i18n';
+import { categoryLabel } from './category';
 import { amountMatches } from './money';
 import {
   MONTH_NAMES_SHORT,
@@ -449,7 +450,12 @@ export function applyEditNominal(bill: Bill, newAmount: number): Bill {
 // Dashboard selectors
 // ---------------------------------------------------------------------------
 
-export type BillBadgeKind = 'installment-done' | 'paid' | 'overdue' | 'due';
+export type BillBadgeKind =
+  | 'installment-done'
+  | 'paid'
+  | 'unpaid'
+  | 'overdue'
+  | 'due';
 
 export interface BillBadge {
   kind: BillBadgeKind;
@@ -472,6 +478,11 @@ export function billBadge(
   if (isBillSettledForMonth(bill, record)) {
     return { kind: 'paid', text: en ? 'Paid' : 'Lunas' };
   }
+  // Only installments carry a due-date countdown. Regular bills (Listrik, Air,
+  // WiFi, …) are a plain paid / not-paid state — no "H-n" / "Telat n hari".
+  if (!bill.tenor) {
+    return { kind: 'unpaid', text: en ? 'Not paid' : 'Belum Lunas' };
+  }
   const due = daysStatus(bill.dueDay, now, locale);
   return due.overdue
     ? { kind: 'overdue', text: due.text }
@@ -482,42 +493,44 @@ export function billBadge(
 export function billMetaText(bill: Bill, locale: Locale = 'id'): string {
   const en = locale === 'en';
   const short = en ? MONTH_NAMES_SHORT_EN : MONTH_NAMES_SHORT;
-  let meta = en ? `Due on the ${bill.dueDay}` : `Jatuh tempo tgl ${bill.dueDay}`;
-  if (bill.dueMonth && bill.dueYear) {
-    meta += en
-      ? ` (from ${short[bill.dueMonth - 1]} ${bill.dueYear})`
-      : ` (mulai ${short[bill.dueMonth - 1]} ${bill.dueYear})`;
-  }
+  const parts: string[] = [];
+
+  // Only installments show a due-date / start-month note and a counter (point 6).
   if (bill.tenor) {
-    meta += isInstallmentDone(bill)
-      ? en
-        ? ` · Installment paid (${bill.tenor}/${bill.tenor})`
-        : ` · Cicilan lunas (${bill.tenor}/${bill.tenor})`
-      : en
-        ? ` · Installment ${currentInstallmentNumber(bill)} of ${bill.tenor}`
-        : ` · Cicilan ke-${currentInstallmentNumber(bill)} dari ${bill.tenor}`;
-    meta +=
-      bill.type === 'single'
+    let due = en ? `Due on the ${bill.dueDay}` : `Jatuh tempo tgl ${bill.dueDay}`;
+    if (bill.dueMonth && bill.dueYear) {
+      due += en
+        ? ` (from ${short[bill.dueMonth - 1]} ${bill.dueYear})`
+        : ` (mulai ${short[bill.dueMonth - 1]} ${bill.dueYear})`;
+    }
+    parts.push(due);
+    parts.push(
+      isInstallmentDone(bill)
         ? en
-          ? ` · Responsible: ${bill.responsible}`
-          : ` · PJ: ${bill.responsible}`
+          ? `Installment paid (${bill.tenor}/${bill.tenor})`
+          : `Cicilan lunas (${bill.tenor}/${bill.tenor})`
         : en
-          ? ` · Split, transfer to ${bill.responsible}`
-          : ` · Dibagi rata, transfer ke ${bill.responsible}`;
+          ? `Installment ${currentInstallmentNumber(bill)} of ${bill.tenor}`
+          : `Cicilan ke-${currentInstallmentNumber(bill)} dari ${bill.tenor}`,
+    );
+  }
+
+  if (bill.type === 'single') {
+    parts.push(en ? `Responsible: ${bill.responsible}` : `PJ: ${bill.responsible}`);
+  } else if (bill.tenor) {
+    parts.push(
+      en
+        ? `Split, transfer to ${bill.responsible}`
+        : `Dibagi rata, transfer ke ${bill.responsible}`,
+    );
   } else {
-    meta +=
-      bill.type === 'single'
-        ? en
-          ? ` · Responsible: ${bill.responsible}`
-          : ` · PJ: ${bill.responsible}`
-        : en
-          ? ' · Split evenly'
-          : ' · Dibagi rata';
+    parts.push(en ? 'Split evenly' : 'Dibagi rata');
   }
+
   if (bill.lender) {
-    meta += en ? ` · Loan from ${bill.lender}` : ` · Pinjaman dari ${bill.lender}`;
+    parts.push(en ? `Loan from ${bill.lender}` : `Pinjaman dari ${bill.lender}`);
   }
-  return meta;
+  return parts.join(' · ');
 }
 
 export interface MonthlyOverview {
@@ -688,7 +701,7 @@ export function buildExportRows(
       rows.push({
         bulan: monthKeyLabel(monthKey, locale),
         tagihan: bill.name,
-        kategori: bill.category,
+        kategori: categoryLabel(bill.category, locale),
         nominal: record.amount ?? bill.estimate,
         tipe:
           (bill.type === 'single'

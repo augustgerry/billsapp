@@ -4,8 +4,9 @@ import { ThemedText } from '@/components/themed-text';
 import { BILL_CATEGORIES } from '@/types/models';
 import { Spacing } from '@/constants/theme';
 import type { MonthlyCategoryTotals } from '@/domain/billing';
+import { categoryLabel } from '@/domain/category';
 import { formatShort } from '@/domain/money';
-import { useT } from '@/features/settings/locale';
+import { useLocale } from '@/features/settings/locale';
 import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 
 const BAR_HEIGHT = 120;
@@ -13,7 +14,7 @@ const BAR_HEIGHT = 120;
 /** Stacked monthly bars per category. Plain Views — no chart lib. */
 export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
   const c = useTheme();
-  const t = useT();
+  const { t, lang } = useLocale();
   const catColor = useCategoryColors();
 
   if (data.length < 2) {
@@ -63,7 +64,7 @@ export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
               style={[styles.swatch, { backgroundColor: catColor[cat] }]}
             />
             <ThemedText themeColor="textSecondary" style={styles.legendText}>
-              {cat}
+              {categoryLabel(cat, lang)}
             </ThemedText>
           </View>
         ))}

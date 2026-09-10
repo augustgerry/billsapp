@@ -98,10 +98,6 @@ export const STRINGS = {
   'home.accept': { id: 'Terima', en: 'Accept' },
   'home.decline': { id: 'Tolak', en: 'Decline' },
   'home.continue': { id: 'LANJUTKAN', en: 'CONTINUE' },
-  'home.longPressHint': {
-    id: 'Tekan lama untuk duplikat / hapus dari daftar.',
-    en: 'Long-press to duplicate / remove from the list.',
-  },
   'home.startNew': { id: 'MULAI BARU', en: 'START NEW' },
   'home.createGroup': {
     id: 'Buat grup rumah tangga baru',
@@ -114,6 +110,21 @@ export const STRINGS = {
   },
   'home.duplicate': { id: 'Duplikat', en: 'Duplicate' },
   'home.removeFromList': { id: 'Hapus dari daftar', en: 'Remove from list' },
+  'home.rowMenu': { id: 'Menu untuk {name}', en: 'Menu for {name}' },
+  'home.removeTitle': {
+    id: 'Hapus {name} dari daftar?',
+    en: 'Remove {name} from the list?',
+  },
+  'home.removeBody': {
+    id: 'Grupnya nggak dihapus — cuma hilang dari daftar Lanjutkan di HP ini.',
+    en: "The group isn't deleted — it just leaves the Continue list on this phone.",
+  },
+  'home.duplicateTitle': { id: 'Duplikat grup', en: 'Duplicate group' },
+  'home.duplicateBody': {
+    id: 'Bikin grup baru dengan anggota yang sama, tanpa tagihan. Anggota lain akan diundang ulang.',
+    en: 'Creates a new group with the same members and no bills. The others get re-invited.',
+  },
+  'home.copySuffix': { id: '{name} (Salinan)', en: '{name} (Copy)' },
 
   // --- settings ---
   'settings.account': { id: 'AKUN', en: 'ACCOUNT' },
@@ -287,6 +298,7 @@ export const STRINGS = {
   },
   'bill.submit': { id: 'Simpan tagihan', en: 'Save bill' },
   'bill.saveFailed': { id: 'Gagal menyimpan tagihan', en: 'Failed to save the bill' },
+  'bill.invitedTag': { id: 'diundang', en: 'invited' },
 
   // --- bill card ---
   'card.paid': { id: 'Lunas', en: 'Paid' },

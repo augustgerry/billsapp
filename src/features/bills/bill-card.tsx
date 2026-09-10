@@ -5,7 +5,8 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CategoryIcons, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { CategoryIcon } from '@/features/bills/category-icon';
 import {
   billAmountForMonth,
   billBadge,
@@ -23,7 +24,7 @@ import {
 import { formatDateTime } from '@/domain/dates';
 import { formatRp, parseRupiah } from '@/domain/money';
 import { useLocale } from '@/features/settings/locale';
-import { useCategoryColors, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Bill, MemberName, MonthRecord } from '@/types/models';
 
 export type ProofAction =
@@ -81,7 +82,6 @@ export function BillCard({
 }: BillCardProps) {
   const c = useTheme();
   const { t, lang } = useLocale();
-  const catColor = useCategoryColors();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(0);
@@ -94,7 +94,7 @@ export function BillCard({
   const badgeColor =
     badge.kind === 'overdue'
       ? c.danger
-      : badge.kind === 'due'
+      : badge.kind === 'due' || badge.kind === 'unpaid'
         ? c.gold
         : c.success;
   const amount = billAmountForMonth(bill, record);
@@ -287,17 +287,7 @@ export function BillCard({
   return (
     <View style={[styles.card, { borderColor: c.border }]}>
       <Pressable onPress={() => setOpen((v) => !v)} style={styles.header}>
-        <View
-          style={[
-            styles.icon,
-            {
-              backgroundColor:
-                (catColor[bill.category] ?? c.primary) + '28',
-            },
-          ]}
-        >
-          <ThemedText>{CategoryIcons[bill.category] ?? '📄'}</ThemedText>
-        </View>
+        <CategoryIcon category={bill.category} />
         <View style={styles.headerBody}>
           <ThemedText style={styles.name}>{bill.name}</ThemedText>
           <ThemedText themeColor="textFaint" style={styles.meta}>
@@ -414,13 +404,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     padding: Spacing.three,
-  },
-  icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerBody: { flex: 1 },
   name: { fontSize: 15, fontWeight: '600' },

@@ -7,6 +7,7 @@ import { TextField } from '@/components/ui/text-field';
 import { TextLink } from '@/components/ui/text-link';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { isValidEmail } from '@/domain/email';
 import { useAuth } from '@/features/auth/auth-context';
 import { useT } from '@/features/settings/locale';
 
@@ -19,7 +20,8 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const pwRef = useRef<TextInput>(null);
 
-  const valid = email.trim().length > 0 && password.length > 0;
+  const emailOk = isValidEmail(email);
+  const valid = emailOk && password.length > 0;
 
   async function submit() {
     if (!valid || busy) return;
@@ -50,6 +52,9 @@ export default function LoginScreen() {
           placeholder={t('common.emailPlaceholder')}
           returnKeyType="next"
           onSubmitEditing={() => pwRef.current?.focus()}
+          error={
+            email.length > 0 && !emailOk ? t('register.emailInvalid') : undefined
+          }
         />
         <TextField
           ref={pwRef}

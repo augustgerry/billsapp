@@ -8,9 +8,10 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CategoryIcons, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { MONTH_NAMES_FULL, MONTH_NAMES_FULL_EN } from '@/domain/dates';
 import { perInstallmentFromTotal } from '@/domain/billing';
+import { categoryLabel } from '@/domain/category';
 import { toTitleCase } from '@/domain/text';
 import { formatRp, parseRupiah } from '@/domain/money';
 import { useLocale } from '@/features/settings/locale';
@@ -23,13 +24,14 @@ function Chip({
   label,
   active,
   color,
-  icon,
+  dot,
   onPress,
 }: {
   label: string;
   active: boolean;
   color?: string;
-  icon?: string;
+  /** show a small colour swatch before the label (category chips, point 8) */
+  dot?: boolean;
   onPress: () => void;
 }) {
   const c = useTheme();
@@ -44,7 +46,11 @@ function Chip({
         },
       ]}
     >
-      {icon ? <ThemedText>{icon} </ThemedText> : null}
+      {dot ? (
+        <View
+          style={[styles.chipDot, { backgroundColor: color ?? c.primary }]}
+        />
+      ) : null}
       <ThemedText
         style={{
           fontWeight: active ? '700' : '500',
@@ -108,10 +114,15 @@ export default function AddBillScreen() {
   }
   if (!group) return <LoadingScreen />;
 
-  // pending members can't be a PJ or in a split until they accept
-  const members = group.members
-    .filter((m) => m.status !== 'pending')
-    .map((m) => m.name);
+  // Point 5: pending members (invited, not yet accepted) are still selectable
+  // as PJ / split members so a bill can be created without waiting on everyone.
+  const members = group.members.map((m) => m.name);
+  const pending = new Set(
+    group.members.filter((m) => m.status === 'pending').map((m) => m.name),
+  );
+  const memberLabel = (m: string) =>
+    pending.has(m) ? `${m} · ${t('bill.invitedTag')}` : m;
+
   const isCicilan = category === 'Cicilan';
   const dayN = parseInt(dueDay, 10);
   const tenorN = parseInt(tenor, 10);
@@ -125,10 +136,9 @@ export default function AddBillScreen() {
     name.trim().length > 0 &&
     !!category &&
     amount > 0 &&
-    dayN >= 1 &&
-    dayN <= 31 &&
     typeOk &&
-    (!isCicilan || tenorN > 0);
+    // Point 6: only installments have a due date; regular bills skip it entirely
+    (!isCicilan || (dayN >= 1 && dayN <= 31 && tenorN > 0));
 
   const perMonthPreview =
     isCicilan && totalMode && tenorN > 0 && amount > 0
@@ -165,9 +175,10 @@ export default function AddBillScreen() {
       responsible: responsibleName,
       splitMembers: billType === 'split' ? splitMembers : [],
       estimate,
-      dueDay: dayN,
-      dueMonth: monthN >= 1 && monthN <= 12 ? monthN : now.getMonth() + 1,
-      dueYear: parseInt(dueYear, 10) || now.getFullYear(),
+      // regular bills carry a harmless default; the form doesn't ask (point 6)
+      dueDay: isCicilan ? dayN : 1,
+      dueMonth: isCicilan && monthN >= 1 && monthN <= 12 ? monthN : now.getMonth() + 1,
+      dueYear: isCicilan ? parseInt(dueYear, 10) || now.getFullYear() : now.getFullYear(),
       ...(isCicilan
         ? {
             tenor: tenorN,
@@ -205,8 +216,8 @@ export default function AddBillScreen() {
         {BILL_CATEGORIES.map((cat) => (
           <Chip
             key={cat}
-            label={cat}
-            icon={CategoryIcons[cat]}
+            label={categoryLabel(cat, lang)}
+            dot
             color={catColor[cat]}
             active={category === cat}
             onPress={() => setCategory(cat)}
@@ -279,34 +290,44 @@ export default function AddBillScreen() {
         </>
       ) : null}
 
-      <ThemedText themeColor="textSecondary" style={styles.label}>
-        {t('bill.dueLabel')}
-      </ThemedText>
-      <View style={styles.row}>
-        <TextField
-          containerStyle={styles.flex1}
-          label={t('bill.day')}
-          value={dueDay}
-          onChangeText={(v) => setDueDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
-          keyboardType="number-pad"
-          placeholder="1-31"
-        />
-        <TextField
-          containerStyle={styles.flex1}
-          label={t('bill.month')}
-          value={dueMonth}
-          onChangeText={(v) => setDueMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
-          keyboardType="number-pad"
-          hint={monthN >= 1 && monthN <= 12 ? monthNames[monthN - 1] : '1-12'}
-        />
-        <TextField
-          containerStyle={styles.flex1}
-          label={t('bill.year')}
-          value={dueYear}
-          onChangeText={(v) => setDueYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
-          keyboardType="number-pad"
-        />
-      </View>
+      {isCicilan ? (
+        <>
+          <ThemedText themeColor="textSecondary" style={styles.label}>
+            {t('bill.dueLabel')}
+          </ThemedText>
+          <View style={styles.row}>
+            <TextField
+              containerStyle={styles.flex1}
+              label={t('bill.day')}
+              value={dueDay}
+              onChangeText={(v) =>
+                setDueDay(v.replace(/[^0-9]/g, '').slice(0, 2))
+              }
+              keyboardType="number-pad"
+              placeholder="1-31"
+            />
+            <TextField
+              containerStyle={styles.flex1}
+              label={t('bill.month')}
+              value={dueMonth}
+              onChangeText={(v) =>
+                setDueMonth(v.replace(/[^0-9]/g, '').slice(0, 2))
+              }
+              keyboardType="number-pad"
+              hint={monthN >= 1 && monthN <= 12 ? monthNames[monthN - 1] : '1-12'}
+            />
+            <TextField
+              containerStyle={styles.flex1}
+              label={t('bill.year')}
+              value={dueYear}
+              onChangeText={(v) =>
+                setDueYear(v.replace(/[^0-9]/g, '').slice(0, 4))
+              }
+              keyboardType="number-pad"
+            />
+          </View>
+        </>
+      ) : null}
 
       <ThemedText themeColor="textSecondary" style={styles.label}>
         {t('bill.typeLabel')}
@@ -329,7 +350,7 @@ export default function AddBillScreen() {
             {members.map((m) => (
               <Chip
                 key={m}
-                label={m}
+                label={memberLabel(m)}
                 active={responsible === m}
                 onPress={() => setResponsible(m)}
               />
@@ -345,7 +366,7 @@ export default function AddBillScreen() {
             {members.map((m) => (
               <Chip
                 key={m}
-                label={m}
+                label={memberLabel(m)}
                 active={splitMembers.includes(m)}
                 onPress={() => toggleSplitMember(m)}
               />
@@ -360,7 +381,7 @@ export default function AddBillScreen() {
                 {splitMembers.map((m) => (
                   <Chip
                     key={m}
-                    label={m}
+                    label={memberLabel(m)}
                     active={payer === m}
                     onPress={() => setPayer(m)}
                   />
@@ -410,11 +431,13 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     borderWidth: 1,
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 12,
   },
+  chipDot: { width: 8, height: 8, borderRadius: 4 },
   row: { flexDirection: 'row', gap: Spacing.two },
   flex1: { flex: 1 },
   toggleRow: {

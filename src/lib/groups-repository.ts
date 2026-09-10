@@ -84,12 +84,17 @@ export async function createGroup(
   return { groupId: data.id, code: data.code };
 }
 
-/** "Duplikat" from Home — new group, same members, no bills. */
+/**
+ * "Duplikat" from Home — new group, same members (re-invited), no bills.
+ * `name` overrides the default "<name> (Salinan)".
+ */
 export async function duplicateGroup(
   groupId: string,
+  name?: string,
 ): Promise<{ groupId: string; code: string }> {
   const { data, error } = await supabase.rpc('duplicate_group', {
     p_group_id: groupId,
+    ...(name && name.trim() ? { p_name: name.trim() } : {}),
   });
   if (error) throw new Error(error.message);
   return { groupId: data.id, code: data.code };
