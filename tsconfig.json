@@ -21,6 +21,7 @@
     "node_modules",
     ".dev",
     "supabase/functions",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.rtest.tsx"
   ]
 }
