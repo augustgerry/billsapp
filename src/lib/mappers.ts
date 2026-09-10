@@ -28,12 +28,16 @@ import type {
   GroupRow,
   PaymentRow,
   TablesInsert,
-} from './database.types';
+} from './db';
 
 // --- rows -> domain -------------------------------------------------------
 
 export function memberFromRow(row: GroupMemberRow): Member {
-  return { name: row.name, email: row.email };
+  return {
+    name: row.name,
+    email: row.email,
+    status: row.status === 'pending' ? 'pending' : 'active',
+  };
 }
 
 export function billFromRow(row: BillRow): Bill {

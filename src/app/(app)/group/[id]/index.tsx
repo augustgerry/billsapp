@@ -190,7 +190,13 @@ export default function GroupScreen() {
         </ThemedText>
       </View>
       <ThemedText themeColor="textSecondary" style={styles.members}>
-        {group.members.map((m) => m.name).join(', ')}
+        {group.members
+          .filter((m) => m.status !== 'pending')
+          .map((m) => m.name)
+          .join(', ')}
+        {group.members.some((m) => m.status === 'pending')
+          ? ` · ${group.members.filter((m) => m.status === 'pending').length} menunggu`
+          : ''}
       </ThemedText>
 
       <Segmented

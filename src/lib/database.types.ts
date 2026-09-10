@@ -146,6 +146,7 @@ export type Database = {
           group_id: string
           id: string
           name: string
+          status: string
         }
         Insert: {
           created_at?: string
@@ -153,6 +154,7 @@ export type Database = {
           group_id: string
           id?: string
           name: string
+          status?: string
         }
         Update: {
           created_at?: string
@@ -160,6 +162,7 @@ export type Database = {
           group_id?: string
           id?: string
           name?: string
+          status?: string
         }
         Relationships: [
           {
@@ -367,15 +370,28 @@ export type Database = {
         Returns: {
           group_id: string
           member_name: string
+          member_status: string
           name: string
         }[]
       }
       is_group_member: { Args: { gid: string }; Returns: boolean }
+      list_my_invites: {
+        Args: never
+        Returns: {
+          code: string
+          group_id: string
+          name: string
+        }[]
+      }
       push_tokens_for_group_member: {
         Args: { p_group_id: string; p_member: string }
         Returns: {
           token: string
         }[]
+      }
+      respond_to_invite: {
+        Args: { p_accept: boolean; p_group_id: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -512,16 +528,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// ---------------------------------------------------------------------------
-// App-side aliases (hand-added; keep after regenerating this file)
-// ---------------------------------------------------------------------------
-
-export type BillRow = Database['public']['Tables']['bills']['Row'];
-export type BillMonthRow = Database['public']['Tables']['bill_months']['Row'];
-export type GroupRow = Database['public']['Tables']['groups']['Row'];
-export type GroupMemberRow = Database['public']['Tables']['group_members']['Row'];
-export type PaymentRow = Database['public']['Tables']['payments']['Row'];
-export type RecentGroupRow = Database['public']['Tables']['recent_groups']['Row'];
-export type JoinLookupRow =
-  Database['public']['Functions']['get_group_for_join']['Returns'][number];

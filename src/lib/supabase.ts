@@ -4,7 +4,7 @@ import { AppState, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from './database.types';
+import type { Database } from './db';
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from './env';
 
 /**

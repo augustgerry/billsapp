@@ -111,9 +111,9 @@ function group(bills: Bill[], monthly: Group['monthly'] = {}): Group {
     name: 'Rumah Kita',
     pin: '123456',
     members: [
-      { name: 'Gerry', email: 'gerry@x.com' },
-      { name: 'Kaka', email: 'kaka@x.com' },
-      { name: 'Nina', email: 'nina@x.com' },
+      { name: 'Gerry', email: 'gerry@x.com', status: 'active' as const },
+      { name: 'Kaka', email: 'kaka@x.com', status: 'active' as const },
+      { name: 'Nina', email: 'nina@x.com', status: 'active' as const },
     ],
     bills,
     monthly,
@@ -473,6 +473,17 @@ test('maybeAdvanceInstallment: no-op once already done', () => {
 });
 
 // --- dashboard selectors ---------------------------------------
+
+test('monthlyOverview: pending members are excluded from contributions', () => {
+  const g = group([splitBill()]);
+  g.members.push({ name: 'Tono', email: 't@x.com', status: 'pending' });
+  const ov = monthlyOverview(g, MONTH);
+  assert.equal(
+    ov.members.find((m) => m.name === 'Tono'),
+    undefined,
+  );
+  assert.equal(ov.members.length, 3); // Gerry, Kaka, Nina — not Tono
+});
 
 test('monthlyOverview: no bills -> everyone has no dues, nothing owed', () => {
   const ov = monthlyOverview(group([]), MONTH);

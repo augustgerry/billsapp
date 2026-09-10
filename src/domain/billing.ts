@@ -494,7 +494,8 @@ export function monthlyOverview(
   const owedDetail: Record<MemberName, OwedLine[]> = {};
   const hasDues: Record<MemberName, boolean> = {};
 
-  for (const m of group.members) {
+  const activeMembers = group.members.filter((m) => m.status !== 'pending');
+  for (const m of activeMembers) {
     contributions[m.name] = 0;
     owed[m.name] = 0;
     owedDetail[m.name] = [];
@@ -535,7 +536,7 @@ export function monthlyOverview(
     }
   }
 
-  const members: MemberSummary[] = group.members.map((m) => ({
+  const members: MemberSummary[] = activeMembers.map((m) => ({
     name: m.name,
     contribution: contributions[m.name] ?? 0,
     owed: owed[m.name] ?? 0,

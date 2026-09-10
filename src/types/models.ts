@@ -36,11 +36,18 @@ export interface Account {
  * matched to exactly one `Member.email` in the group — no manual "who are you?"
  * step. No match => access denied.
  */
+export type MemberStatus = 'pending' | 'active';
+
 export interface Member {
   /** Display name, unique within the group. Used as the key everywhere. */
   name: string;
   /** Lowercased email. Required for every member. */
   email: string;
+  /**
+   * `pending` until the person accepts the invite. Only `active` members can
+   * open the group, be a PJ, or be in a split. Existing rows are `active`.
+   */
+  status: MemberStatus;
 }
 
 // ---------------------------------------------------------------------------

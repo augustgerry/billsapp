@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import type { BillMonthRow, BillRow, PaymentRow } from './database.types';
+import type { BillMonthRow, BillRow, PaymentRow } from './db';
 import {
   assembleMonth,
   billFromRow,

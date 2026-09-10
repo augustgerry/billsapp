@@ -41,7 +41,10 @@ export default function GroupLoginScreen() {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
         <ThemedText type="subtitle">{name ?? 'Grup'}</ThemedText>
-        <ThemedText themeColor="danger">{loadError}</ThemedText>
+        <ThemedText themeColor="danger">
+          Nggak bisa buka grup ini. Kalau kamu baru diundang, terima dulu
+          undangannya di Home.
+        </ThemedText>
       </Screen>
     );
   }
@@ -52,13 +55,14 @@ export default function GroupLoginScreen() {
     (m) => m.email.toLowerCase() === (email ?? '').toLowerCase(),
   );
 
-  if (!member) {
+  if (!member || member.status === 'pending') {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
         <ThemedText type="subtitle">{group.name}</ThemedText>
         <ThemedText themeColor="danger">
-          Email kamu ({email}) belum terdaftar sebagai anggota grup ini. Minta
-          admin buat menambahkan email kamu ke daftar anggota.
+          {member?.status === 'pending'
+            ? 'Kamu diundang ke grup ini tapi belum menerima undangannya. Buka Home lalu terima undangannya.'
+            : `Email kamu (${email}) belum terdaftar sebagai anggota grup ini. Minta admin buat menambahkan email kamu.`}
         </ThemedText>
       </Screen>
     );

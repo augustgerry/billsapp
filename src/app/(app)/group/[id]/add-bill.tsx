@@ -105,7 +105,10 @@ export default function AddBillScreen() {
   }
   if (!group) return <LoadingScreen />;
 
-  const members = group.members.map((m) => m.name);
+  // pending members can't be a PJ or in a split until they accept
+  const members = group.members
+    .filter((m) => m.status !== 'pending')
+    .map((m) => m.name);
   const isCicilan = category === 'Cicilan';
   const dayN = parseInt(dueDay, 10);
   const tenorN = parseInt(tenor, 10);
