@@ -93,10 +93,43 @@ Polish gaya iOS (spacing, animasi, custom date-picker popup, salin kode
 grup), resize gambar bukti sebelum upload, deep-link dari notif, terjemahin
 nama kategori + body push notif, notif fan-out ke non-PJ.
 
+## Batch "testing feedback #2" (2026-09-11)
+
+- **Bug render "buat bill"** — file `add-bill.rtest.tsx` nyangkut di `src/app/`,
+  ke-bundle Expo Router → narik `@testing-library` → `require('console')`
+  gagal di Metro. Dipindah ke `src/__rtests__/`. Ada render smoke test
+  (`npm run test:render`, jest-expo) yang ngejalanin alur create bill.
+- **1** Kebab menu di "Lanjutkan": `ActionSheet` + `PromptDialog` (ganti
+  `Alert.prompt` yang iOS-only); "Hapus" konfirmasi dulu, "Duplikat" bisa
+  ganti nama. RPC `duplicate_group` nambah arg opsional `p_name`.
+- **2** `isValidEmail()` (domain/email.ts) — wajib TLD beneran; dipasang di
+  sign-in / sign-up / anggota grup dengan error merah inline.
+- **3** Field numerik (PIN dll.): tombol "Selesai" inline di Android
+  (`TextField`), iOS tetap pakai InputAccessoryView.
+- **4** Undangan real-time: `group_members` masuk publication + RLS
+  "read own rows by email"; `useInvitesRealtime()` refresh Home.
+- **5** Anggota `pending` bisa dipilih jadi PJ / split (ditandai "· diundang").
+- **6** Kategori non-Cicilan: field tanggal hilang, badge cuma
+  Lunas / Belum Lunas (`billBadge` kind `'unpaid'`).
+- **7** `DateField` — satu field → popup terpadu (hari+bulan+tahun),
+  bisa diketik `DD/MM/YYYY` dengan echo langsung.
+- **8** Ikon kategori seragam (`CategoryIcon`, receipt-outline di lingkaran
+  berwarna); chip pakai titik warna, bukan emoji. `categoryLabel()` id/en.
+- **9** `Screen` keyboard-aware: field yang di-fokus auto-scroll di atas
+  keyboard (`scrollResponderScrollNativeHandleToKeyboard`, tanpa dep baru).
+- **10** Audit i18n: countdown ("in N days"), error export, kolom Type export.
+- **11** Rebrand kuning (`#EAB308` / `#FACC15`). Logo "split ring" digenerate
+  dari kode (`scripts/gen-logo.mjs`, pngjs) → icon + splash + adaptive icon.
+  `<Wordmark>` di Home + layar auth. `name` app → "Kongsi".
+- **12** Copy pass: Indonesia lebih rapi ("nggak"→"belum/tidak", dll.).
+- **13** Kartu diseragamkan (surface + hairline + radius 16), field fokus
+  dapat border aksen, Screen sembunyiin scroll indicator.
+
 ## Cara jalanin
 
 ```bash
-npm test            # 56 test
+npm test            # 58 domain test (tsx)
+npm run test:render # 7 render smoke test (jest-expo)
 npm run typecheck   # bersih
 npm start           # atau: npx expo start --tunnel
 ```
