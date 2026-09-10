@@ -1,16 +1,41 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { Stack } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SupabaseGate } from '@/components/supabase-gate';
+import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
+import {
+  ThemePreferenceProvider,
+  useResolvedScheme,
+} from '@/features/settings/theme-preference';
 
 SplashScreen.preventAutoHideAsync();
+
+function navTheme(scheme: 'light' | 'dark') {
+  const c = Colors[scheme];
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: c.primary,
+      background: c.background,
+      card: c.surface,
+      text: c.text,
+      border: c.border,
+      notification: c.danger,
+    },
+  };
+}
 
 function SplashHider() {
   const { initializing } = useAuth();
@@ -20,20 +45,28 @@ function SplashHider() {
   return null;
 }
 
+function ThemedApp() {
+  const scheme = useResolvedScheme();
+  return (
+    <ThemeProvider value={navTheme(scheme)}>
+      <SupabaseGate>
+        <AuthProvider>
+          <SplashHider />
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthProvider>
+      </SupabaseGate>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
-  const scheme = useColorScheme();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <SupabaseGate>
-            <AuthProvider>
-              <SplashHider />
-              <Stack screenOptions={{ headerShown: false }} />
-            </AuthProvider>
-          </SupabaseGate>
-          <StatusBar style="auto" />
-        </ThemeProvider>
+        <ThemePreferenceProvider>
+          <ThemedApp />
+        </ThemePreferenceProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

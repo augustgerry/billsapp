@@ -17,21 +17,21 @@ export const Colors = {
     text: '#000000',
     background: '#F2F2F7',
     backgroundElement: '#FFFFFF',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-    textFaint: '#8A8A8E',
+    backgroundSelected: '#E5E5EA',
+    textSecondary: '#55555B',
+    textFaint: '#8E8E93',
     surface: '#FFFFFF',
-    surface2: '#EFEFF4',
-    border: '#D1D1D6',
-    primary: '#0A84FF',
-    primaryText: '#0A6DD8',
-    primaryTint: 'rgba(10,132,255,0.12)',
-    success: '#248A3D',
-    successTint: 'rgba(36,138,61,0.14)',
-    danger: '#D70015',
-    dangerTint: 'rgba(215,0,21,0.12)',
-    gold: '#A05A00',
-    goldTint: 'rgba(160,90,0,0.12)',
+    surface2: '#ECECF1',
+    border: '#D6D6DC',
+    primary: '#007AFF',
+    primaryText: '#0067DB',
+    primaryTint: 'rgba(0,122,255,0.12)',
+    success: '#1E7A34',
+    successTint: 'rgba(30,122,52,0.13)',
+    danger: '#CE0016',
+    dangerTint: 'rgba(206,0,22,0.10)',
+    gold: '#A85800',
+    goldTint: 'rgba(168,88,0,0.12)',
   },
   dark: {
     text: '#FFFFFF',
@@ -55,14 +55,27 @@ export const Colors = {
   },
 } as const;
 
-/** Icon + accent colour per bill category (matches the prototype). */
+/**
+ * Accent colour per bill category, per theme. Dark = prototype hues; light =
+ * a touch deeper so coloured text still reads on white. Use `useCategoryColors()`.
+ */
 export const CategoryColors = {
-  Listrik: '#0A84FF',
-  Air: '#64D2FF',
-  WiFi: '#BF5AF2',
-  'Tagihan Rumah': '#FF9F0A',
-  Cicilan: '#8E8E93',
-  Lainnya: '#98989D',
+  dark: {
+    Listrik: '#0A84FF',
+    Air: '#64D2FF',
+    WiFi: '#BF5AF2',
+    'Tagihan Rumah': '#FF9F0A',
+    Cicilan: '#98989D',
+    Lainnya: '#8E8E93',
+  },
+  light: {
+    Listrik: '#0A6DD8',
+    Air: '#0090C4',
+    WiFi: '#9A38D6',
+    'Tagihan Rumah': '#B25000',
+    Cicilan: '#6C6C70',
+    Lainnya: '#8E8E93',
+  },
 } as const;
 
 export const CategoryIcons = {

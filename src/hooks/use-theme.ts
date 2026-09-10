@@ -1,14 +1,12 @@
-/**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
- */
+import { CategoryColors, Colors } from '@/constants/theme';
+import { useResolvedScheme } from '@/features/settings/theme-preference';
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
+/** Theme-aware colour set, respecting the manual Terang/Gelap/Ikuti Sistem choice. */
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
+  return Colors[useResolvedScheme()];
+}
 
-  return Colors[theme];
+/** Per-category accent colours for the current theme. */
+export function useCategoryColors() {
+  return CategoryColors[useResolvedScheme()];
 }

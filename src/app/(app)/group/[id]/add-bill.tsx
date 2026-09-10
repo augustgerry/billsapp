@@ -8,11 +8,11 @@ import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CategoryColors, CategoryIcons, Spacing } from '@/constants/theme';
+import { CategoryIcons, Spacing } from '@/constants/theme';
 import { MONTH_NAMES_FULL } from '@/domain/dates';
 import { perInstallmentFromTotal } from '@/domain/billing';
 import { formatRp, parseRupiah } from '@/domain/money';
-import { useTheme } from '@/hooks/use-theme';
+import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 import { insertBill } from '@/lib/bills-repository';
 import { fetchGroup } from '@/lib/groups-repository';
 import { BILL_CATEGORIES, type Bill, type BillCategory, type Group } from '@/types/models';
@@ -58,6 +58,7 @@ function Chip({
 export default function AddBillScreen() {
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const c = useTheme();
+  const catColor = useCategoryColors();
   const now = useMemo(() => new Date(), []);
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -201,7 +202,7 @@ export default function AddBillScreen() {
             key={cat}
             label={cat}
             icon={CategoryIcons[cat]}
-            color={CategoryColors[cat]}
+            color={catColor[cat]}
             active={category === cat}
             onPress={() => setCategory(cat)}
           />

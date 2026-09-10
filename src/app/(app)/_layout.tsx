@@ -11,6 +11,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerTitleAlign: 'center' }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ title: 'Pengaturan' }} />
       <Stack.Screen name="create-group" options={{ title: 'Buat grup' }} />
       <Stack.Screen name="join-group" options={{ title: 'Buka grup' }} />
       <Stack.Screen name="group-login" options={{ title: 'Masuk grup' }} />

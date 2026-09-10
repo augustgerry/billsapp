@@ -17,7 +17,7 @@ import {
 } from '@/lib/recent-groups-repository';
 
 export default function HomeScreen() {
-  const { email, signOut } = useAuth();
+  const { email } = useAuth();
   const c = useTheme();
   const [recents, setRecents] = useState<RecentGroupItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,9 +76,12 @@ export default function HomeScreen() {
         <ThemedText themeColor="textFaint" style={styles.email}>
           {email}
         </ThemedText>
-        <Pressable onPress={() => signOut()} accessibilityRole="button">
-          <ThemedText themeColor="danger" style={styles.logout}>
-            Keluar
+        <Pressable
+          onPress={() => router.push('/(app)/settings')}
+          accessibilityRole="button"
+        >
+          <ThemedText themeColor="primaryText" style={styles.logout}>
+            Pengaturan
           </ThemedText>
         </Pressable>
       </View>

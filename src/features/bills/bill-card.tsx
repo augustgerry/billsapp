@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CategoryColors, CategoryIcons, Spacing } from '@/constants/theme';
+import { CategoryIcons, Spacing } from '@/constants/theme';
 import {
   billAmountForMonth,
   billBadge,
@@ -22,7 +22,7 @@ import {
 } from '@/domain/billing';
 import { formatDateTime } from '@/domain/dates';
 import { formatRp, parseRupiah } from '@/domain/money';
-import { useTheme } from '@/hooks/use-theme';
+import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 import type { Bill, MemberName, MonthRecord } from '@/types/models';
 
 export type ProofAction =
@@ -79,6 +79,7 @@ export function BillCard({
   resolveProofUrl,
 }: BillCardProps) {
   const c = useTheme();
+  const catColor = useCategoryColors();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(0);
@@ -286,7 +287,7 @@ export function BillCard({
             styles.icon,
             {
               backgroundColor:
-                (CategoryColors[bill.category] ?? c.primary) + '28',
+                (catColor[bill.category] ?? c.primary) + '28',
             },
           ]}
         >

@@ -2,16 +2,17 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { BILL_CATEGORIES } from '@/types/models';
-import { CategoryColors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { MonthlyCategoryTotals } from '@/domain/billing';
 import { formatShort } from '@/domain/money';
-import { useTheme } from '@/hooks/use-theme';
+import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 
 const BAR_HEIGHT = 120;
 
 /** Stacked monthly bars per category. Plain Views — no chart lib. */
 export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
   const c = useTheme();
+  const catColor = useCategoryColors();
 
   if (data.length < 2) {
     return (
@@ -40,7 +41,7 @@ export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
                     key={cat}
                     style={{
                       height: (v / max) * BAR_HEIGHT,
-                      backgroundColor: CategoryColors[cat],
+                      backgroundColor: catColor[cat],
                     }}
                   />
                 );
@@ -57,7 +58,7 @@ export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
         {BILL_CATEGORIES.map((cat) => (
           <View key={cat} style={styles.legendItem}>
             <View
-              style={[styles.swatch, { backgroundColor: CategoryColors[cat] }]}
+              style={[styles.swatch, { backgroundColor: catColor[cat] }]}
             />
             <ThemedText themeColor="textSecondary" style={styles.legendText}>
               {cat}
