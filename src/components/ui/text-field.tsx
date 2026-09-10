@@ -1,9 +1,11 @@
 import { forwardRef } from 'react';
 import {
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type KeyboardTypeOptions,
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
@@ -11,6 +13,7 @@ import {
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { KEYBOARD_DONE_ID } from './keyboard-done-bar';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
@@ -19,9 +22,23 @@ interface TextFieldProps extends TextInputProps {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
+const NUMERIC: KeyboardTypeOptions[] = [
+  'number-pad',
+  'numeric',
+  'decimal-pad',
+  'phone-pad',
+];
+
 export const TextField = forwardRef<TextInput, TextFieldProps>(
   ({ label, error, hint, style, containerStyle, ...props }, ref) => {
     const c = useTheme();
+
+    // numeric keyboards have no return key -> attach the "Selesai" accessory (iOS)
+    const needsDoneBar =
+      Platform.OS === 'ios' &&
+      !!props.keyboardType &&
+      NUMERIC.includes(props.keyboardType);
+
     return (
       <View style={[styles.field, containerStyle]}>
         {label ? (
@@ -30,6 +47,9 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
         <TextInput
           ref={ref}
           placeholderTextColor={c.textFaint}
+          inputAccessoryViewID={
+            needsDoneBar ? KEYBOARD_DONE_ID : props.inputAccessoryViewID
+          }
           style={[
             styles.input,
             {

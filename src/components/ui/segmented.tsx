@@ -27,15 +27,15 @@ export function Segmented<T extends string>({
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
-            style={[
-              styles.seg,
-              active && { backgroundColor: c.surface },
-            ]}
+            style={[styles.seg, active && { backgroundColor: c.surface }]}
           >
             <Text
               style={[
                 styles.label,
-                { color: active ? c.text : c.textSecondary },
+                {
+                  color: active ? c.primaryText : c.textSecondary,
+                  fontWeight: active ? '700' : '600',
+                },
               ]}
             >
               {opt.label}

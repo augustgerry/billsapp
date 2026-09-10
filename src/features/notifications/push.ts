@@ -53,6 +53,7 @@ export async function registerPushToken(userId: string): Promise<void> {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Umum',
         importance: Notifications.AndroidImportance.DEFAULT,
+        lightColor: '#D6AE52',
       });
     }
 

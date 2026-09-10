@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
@@ -79,10 +80,10 @@ export default function HomeScreen() {
         <Pressable
           onPress={() => router.push('/(app)/settings')}
           accessibilityRole="button"
+          accessibilityLabel="Pengaturan"
+          hitSlop={10}
         >
-          <ThemedText themeColor="primaryText" style={styles.logout}>
-            Pengaturan
-          </ThemedText>
+          <Ionicons name="settings-outline" size={22} color={c.textSecondary} />
         </Pressable>
       </View>
 

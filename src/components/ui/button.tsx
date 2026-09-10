@@ -42,7 +42,7 @@ export function Button({
           : c.surface2;
   const fg =
     variant === 'primary'
-      ? '#FFFFFF'
+      ? c.primaryOn
       : variant === 'danger'
         ? c.danger
         : variant === 'ghost'

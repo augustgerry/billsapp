@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { KeyboardDoneBar } from '@/components/ui/keyboard-done-bar';
 import { SupabaseGate } from '@/components/supabase-gate';
 import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
@@ -55,6 +56,7 @@ function ThemedApp() {
           <Stack screenOptions={{ headerShown: false }} />
         </AuthProvider>
       </SupabaseGate>
+      <KeyboardDoneBar />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

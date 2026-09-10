@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { toTitleCase } from '@/domain/text';
 import { useAuth } from '@/features/auth/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { createGroup } from '@/lib/groups-repository';
@@ -78,7 +79,7 @@ export default function CreateGroupScreen() {
       <TextField
         label="Nama grup"
         value={name}
-        onChangeText={setName}
+        onChangeText={(t) => setName(toTitleCase(t))}
         placeholder="Contoh: Rumah Kita"
       />
 
@@ -101,7 +102,7 @@ export default function CreateGroupScreen() {
           <TextField
             placeholder="Nama anggota"
             value={row.name}
-            onChangeText={(t) => setRow(i, { name: t })}
+            onChangeText={(t) => setRow(i, { name: toTitleCase(t) })}
           />
           <TextField
             placeholder="Email anggota"

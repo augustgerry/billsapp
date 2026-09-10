@@ -8,9 +8,12 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 /**
- * Palette. The `dark` set is the primary aesthetic (ported from the iOS-dark
- * look of `kongsi-pilot.html`); `light` mirrors every key so the app stays
- * theme-aware. Keep both objects key-for-key identical.
+ * Palette. Accent is a muted, warm gold (Tricount-inspired). `primaryOn` is the
+ * dark ink to place on a solid gold surface — never white, for contrast.
+ *
+ * Status colours (`success`/`danger`/`gold`) and `CategoryColors` are semantic
+ * and stay distinct from the accent so "action" never reads as "status".
+ * Keep both objects key-for-key identical.
  */
 export const Colors = {
   light: {
@@ -23,9 +26,10 @@ export const Colors = {
     surface: '#FFFFFF',
     surface2: '#ECECF1',
     border: '#D6D6DC',
-    primary: '#007AFF',
-    primaryText: '#0067DB',
-    primaryTint: 'rgba(0,122,255,0.12)',
+    primary: '#9C7A1E',
+    primaryText: '#8A6B18',
+    primaryTint: 'rgba(156,122,30,0.12)',
+    primaryOn: '#1C1C1E',
     success: '#1E7A34',
     successTint: 'rgba(30,122,52,0.13)',
     danger: '#CE0016',
@@ -43,9 +47,10 @@ export const Colors = {
     surface: '#1C1C1E',
     surface2: '#2C2C2E',
     border: '#38383A',
-    primary: '#0A84FF',
-    primaryText: '#409CFF',
-    primaryTint: 'rgba(10,132,255,0.16)',
+    primary: '#D6AE52',
+    primaryText: '#D6AE52',
+    primaryTint: 'rgba(214,174,82,0.16)',
+    primaryOn: '#1C1C1E',
     success: '#32D74B',
     successTint: 'rgba(50,215,75,0.16)',
     danger: '#FF453A',

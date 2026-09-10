@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CategoryIcons, Spacing } from '@/constants/theme';
 import { MONTH_NAMES_FULL } from '@/domain/dates';
 import { perInstallmentFromTotal } from '@/domain/billing';
+import { toTitleCase } from '@/domain/text';
 import { formatRp, parseRupiah } from '@/domain/money';
 import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 import { insertBill } from '@/lib/bills-repository';
@@ -189,7 +190,7 @@ export default function AddBillScreen() {
       <TextField
         label="Nama tagihan"
         value={name}
-        onChangeText={setName}
+        onChangeText={(t) => setName(toTitleCase(t))}
         placeholder="Contoh: Listrik, Internet, Cicilan Motor"
       />
 
@@ -262,7 +263,9 @@ export default function AddBillScreen() {
               ]}
             >
               {totalMode ? (
-                <ThemedText style={{ color: '#fff', fontSize: 12 }}>✓</ThemedText>
+                <ThemedText style={{ color: c.primaryOn, fontSize: 12 }}>
+                  ✓
+                </ThemedText>
               ) : null}
             </View>
             <ThemedText themeColor="textSecondary">
