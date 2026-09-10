@@ -20,6 +20,7 @@ import { Spacing } from '@/constants/theme';
 import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import { KEYBOARD_DONE_ID } from './keyboard-done-bar';
+import { useKeyboardAware } from './keyboard-aware';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
@@ -42,6 +43,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
   ) => {
     const c = useTheme();
     const t = useT();
+    const keyboardAware = useKeyboardAware();
     const [focused, setFocused] = useState(false);
 
     const isNumeric =
@@ -56,6 +58,8 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(
 
     const handleFocus: FocusHandler = (e) => {
       setFocused(true);
+      const tag = e?.nativeEvent?.target;
+      if (typeof tag === 'number') keyboardAware?.scrollToInput(tag);
       onFocus?.(e);
     };
     const handleBlur: BlurHandler = (e) => {

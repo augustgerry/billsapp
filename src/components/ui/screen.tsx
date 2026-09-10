@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +11,7 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { KeyboardAwareProvider } from './keyboard-aware';
 
 interface ScreenProps {
   children: ReactNode;
@@ -28,6 +29,7 @@ export function Screen({
   edges = ['top', 'bottom', 'left', 'right'],
 }: ScreenProps) {
   const c = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
   const inner = <View style={[styles.inner, contentStyle]}>{children}</View>;
 
   return (
@@ -40,12 +42,18 @@ export function Screen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {scroll ? (
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scroll}
-          >
-            {inner}
-          </ScrollView>
+          <KeyboardAwareProvider scrollRef={scrollRef}>
+            <ScrollView
+              ref={scrollRef}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={styles.scroll}
+              showsVerticalScrollIndicator={false}
+            >
+              {inner}
+            </ScrollView>
+          </KeyboardAwareProvider>
         ) : (
           <View style={styles.scroll}>{inner}</View>
         )}
@@ -56,7 +64,11 @@ export function Screen({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { flexGrow: 1, alignItems: 'center' },
+  scroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingBottom: Spacing.six,
+  },
   inner: {
     width: '100%',
     maxWidth: MaxContentWidth,

@@ -19,6 +19,10 @@ export const STRINGS = {
   'common.password': { id: 'Password', en: 'Password' },
   'common.emailPlaceholder': { id: 'nama@email.com', en: 'name@email.com' },
 
+  // --- date field ---
+  'date.pick': { id: 'Pilih tanggal', en: 'Pick a date' },
+  'date.typeHint': { id: 'atau ketik: HH/BB/TTTT', en: 'or type: DD/MM/YYYY' },
+
   // --- Supabase gate ---
   'gate.title': {
     id: 'Supabase belum dikonfigurasi',

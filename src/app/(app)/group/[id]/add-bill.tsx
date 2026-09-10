@@ -3,13 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { DateField, type DateParts } from '@/components/ui/date-field';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { MONTH_NAMES_FULL, MONTH_NAMES_FULL_EN } from '@/domain/dates';
 import { perInstallmentFromTotal } from '@/domain/billing';
 import { categoryLabel } from '@/domain/category';
 import { toTitleCase } from '@/domain/text';
@@ -68,7 +68,6 @@ export default function AddBillScreen() {
   const c = useTheme();
   const { t, lang } = useLocale();
   const catColor = useCategoryColors();
-  const monthNames = lang === 'en' ? MONTH_NAMES_FULL_EN : MONTH_NAMES_FULL;
   const now = useMemo(() => new Date(), []);
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -81,9 +80,7 @@ export default function AddBillScreen() {
   const [splitMembers, setSplitMembers] = useState<string[]>([]);
   const [payer, setPayer] = useState<string | null>(null);
   const [amount, setAmount] = useState(0);
-  const [dueDay, setDueDay] = useState('');
-  const [dueMonth, setDueMonth] = useState(String(now.getMonth() + 1));
-  const [dueYear, setDueYear] = useState(String(now.getFullYear()));
+  const [due, setDue] = useState<Partial<DateParts>>({});
   const [tenor, setTenor] = useState('');
   const [paidCount, setPaidCount] = useState('0');
   const [lender, setLender] = useState('');
@@ -124,9 +121,9 @@ export default function AddBillScreen() {
     pending.has(m) ? `${m} · ${t('bill.invitedTag')}` : m;
 
   const isCicilan = category === 'Cicilan';
-  const dayN = parseInt(dueDay, 10);
   const tenorN = parseInt(tenor, 10);
-  const monthN = parseInt(dueMonth, 10);
+  const dueComplete =
+    due.day != null && due.month != null && due.year != null;
 
   const typeOk =
     billType === 'single'
@@ -138,7 +135,7 @@ export default function AddBillScreen() {
     amount > 0 &&
     typeOk &&
     // Point 6: only installments have a due date; regular bills skip it entirely
-    (!isCicilan || (dayN >= 1 && dayN <= 31 && tenorN > 0));
+    (!isCicilan || (dueComplete && tenorN > 0));
 
   const perMonthPreview =
     isCicilan && totalMode && tenorN > 0 && amount > 0
@@ -176,9 +173,9 @@ export default function AddBillScreen() {
       splitMembers: billType === 'split' ? splitMembers : [],
       estimate,
       // regular bills carry a harmless default; the form doesn't ask (point 6)
-      dueDay: isCicilan ? dayN : 1,
-      dueMonth: isCicilan && monthN >= 1 && monthN <= 12 ? monthN : now.getMonth() + 1,
-      dueYear: isCicilan ? parseInt(dueYear, 10) || now.getFullYear() : now.getFullYear(),
+      dueDay: isCicilan ? due.day! : 1,
+      dueMonth: isCicilan ? due.month! : now.getMonth() + 1,
+      dueYear: isCicilan ? due.year! : now.getFullYear(),
       ...(isCicilan
         ? {
             tenor: tenorN,
@@ -291,42 +288,11 @@ export default function AddBillScreen() {
       ) : null}
 
       {isCicilan ? (
-        <>
-          <ThemedText themeColor="textSecondary" style={styles.label}>
-            {t('bill.dueLabel')}
-          </ThemedText>
-          <View style={styles.row}>
-            <TextField
-              containerStyle={styles.flex1}
-              label={t('bill.day')}
-              value={dueDay}
-              onChangeText={(v) =>
-                setDueDay(v.replace(/[^0-9]/g, '').slice(0, 2))
-              }
-              keyboardType="number-pad"
-              placeholder="1-31"
-            />
-            <TextField
-              containerStyle={styles.flex1}
-              label={t('bill.month')}
-              value={dueMonth}
-              onChangeText={(v) =>
-                setDueMonth(v.replace(/[^0-9]/g, '').slice(0, 2))
-              }
-              keyboardType="number-pad"
-              hint={monthN >= 1 && monthN <= 12 ? monthNames[monthN - 1] : '1-12'}
-            />
-            <TextField
-              containerStyle={styles.flex1}
-              label={t('bill.year')}
-              value={dueYear}
-              onChangeText={(v) =>
-                setDueYear(v.replace(/[^0-9]/g, '').slice(0, 4))
-              }
-              keyboardType="number-pad"
-            />
-          </View>
-        </>
+        <DateField
+          label={t('bill.dueLabel')}
+          value={due}
+          onChange={setDue}
+        />
       ) : null}
 
       <ThemedText themeColor="textSecondary" style={styles.label}>

@@ -128,13 +128,13 @@ test('a single (non-installment) bill can be filled and submitted', async () => 
   });
 });
 
-test('non-installment bills have no due-date field (point 6)', async () => {
+test('due date is installment-only, via the unified picker (points 6 + 7)', async () => {
   renderScreen();
   await waitFor(() => screen.getByText('Nama tagihan'));
   await tap('Listrik');
-  expect(screen.queryByPlaceholderText('1-31')).toBeNull();
+  expect(screen.queryByText('Pilih tanggal')).toBeNull();
   await tap('Cicilan');
-  await waitFor(() => screen.getByPlaceholderText('1-31'));
+  await waitFor(() => screen.getByText('Pilih tanggal'));
 });
 
 test('pending members are selectable as PJ (point 5)', async () => {
@@ -152,6 +152,28 @@ test('the installment branch renders without a render error', async () => {
   await tap('Cicilan');
   await waitFor(() => screen.getByText('Tenor (berapa kali)'));
   expect(caught).toBeNull();
+});
+
+test('an installment bill: pick a date in the popup, then submit (point 7)', async () => {
+  renderScreen();
+  await waitFor(() => screen.getByText('Nama tagihan'));
+
+  await type('Contoh: Listrik, Internet, Cicilan Motor', 'motor');
+  await tap('Cicilan');
+  await tap('Gerry');
+  await type('12', '12'); // tenor
+  await type('Rp.300.000', '500000');
+
+  await tap('Pilih tanggal'); // open the unified date popup
+  await waitFor(() => screen.getByText('Selesai'));
+  await tap('20'); // day grid
+  await tap('Selesai');
+
+  await tap('Simpan tagihan');
+  await waitFor(() => expect(mockInsertBill).toHaveBeenCalled());
+  expect(caught).toBeNull();
+  const bill = mockInsertBill.mock.calls[0][1] as Record<string, unknown>;
+  expect(bill).toMatchObject({ category: 'Cicilan', tenor: 12, dueDay: 20 });
 });
 
 test('the split branch renders without a render error', async () => {
