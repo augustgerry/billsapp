@@ -8,9 +8,13 @@
     "scheme": "billsapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.app.kongsi",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.app.kongsi",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FACC15",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

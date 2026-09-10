@@ -54,6 +54,12 @@ interface AuthContextValue {
   resendCode(email: string): Promise<void>;
   signIn(input: { email: string; password: string }): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * Permanently deletes the account: unwinds group ownership / membership and
+   * personal data, then removes the auth user (via the `delete-account` edge
+   * function). Clears the local session on success.
+   */
+  deleteAccount(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -160,6 +166,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     throwOnError(error);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke<{
+      ok?: boolean;
+      error?: string;
+    }>('delete-account', { method: 'POST' });
+    if (error) throw new Error(error.message);
+    if (!data?.ok) throw new Error(data?.error ?? 'Gagal menghapus akun');
+    // The auth user is gone; drop the now-invalid local session.
+    await supabase.auth.signOut().catch(() => undefined);
+    setSession(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(() => {
     const user = session?.user ?? null;
     return {
@@ -173,8 +191,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendCode,
       signIn,
       signOut,
+      deleteAccount,
     };
-  }, [initializing, session, signUp, verifyEmail, resendCode, signIn, signOut]);
+  }, [
+    initializing,
+    session,
+    signUp,
+    verifyEmail,
+    resendCode,
+    signIn,
+    signOut,
+    deleteAccount,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

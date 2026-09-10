@@ -14,6 +14,7 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerTitleAlign: 'center' }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
+      <Stack.Screen name="legal" options={{ title: t('nav.legal') }} />
       <Stack.Screen name="create-group" options={{ title: t('nav.createGroup') }} />
       <Stack.Screen name="join-group" options={{ title: t('nav.joinGroup') }} />
       <Stack.Screen name="group-login" options={{ title: t('nav.groupLogin') }} />

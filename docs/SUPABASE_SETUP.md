@@ -96,6 +96,22 @@ curl -i -X POST "https://<ref>.functions.supabase.co/read-proof" \
 `verify_jwt = true` (di `config.toml`) — produksi harus pakai access token user,
 bukan anon key.
 
+### Edge Function `delete-account` (hapus akun — wajib buat App Store)
+
+Nggak butuh secret tambahan (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` /
+`SUPABASE_ANON_KEY` udah otomatis ada di runtime edge).
+
+```bash
+supabase db push                      # apply 20260911010000_delete_account.sql
+supabase functions deploy delete-account
+```
+
+Alurnya: client panggil fungsi dengan JWT user → fungsi jalanin RPC
+`delete_my_account_data()` sebagai user itu (lepasin kepemilikan/keanggotaan
+grup + hapus data pribadi) → `auth.admin.deleteUser()` hapus akun auth.
+Grup yang masih ada anggota aktif lain: kepemilikan dialihkan ke anggota
+tertua, grup tetap ada. Grup tanpa anggota aktif lain: kehapus (cascade).
+
 ## 7. Storage
 
 Bucket `proofs` (private) dibikin sama migrasi, plus policy: cuma anggota grup

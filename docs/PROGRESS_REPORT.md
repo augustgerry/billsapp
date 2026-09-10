@@ -156,11 +156,42 @@ nama kategori + body push notif, notif fan-out ke non-PJ.
   diterapin — di-override sama rebrand kuning batch #2, dikonfirmasi user
   tetap kuning terang.
 
+## Batch "pre–App Store" (2026-09-11) — poin 15–17
+
+- **15 Hapus akun dari dalam app.** Menu "Hapus Akun" di Pengaturan (teks
+  merah, di bawah "Keluar") → dialog peringatan `Alert` → baru hapus.
+  - Migrasi `20260911010000_delete_account.sql`: RPC
+    `delete_my_account_data()` (SECURITY DEFINER, jalan sebagai caller).
+    Tiap grup yang dia buat: kepemilikan dialihkan ke anggota aktif tertua,
+    atau grup dihapus kalau nggak ada anggota aktif lain. Keanggotaan
+    caller di semua grup dihapus. `profiles` / `push_tokens` /
+    `recent_groups` dibersihin (juga ke-cascade dari `auth.users`).
+  - Edge function `delete-account` (`verify_jwt=true`): jalanin RPC pakai
+    JWT user, lalu `auth.admin.deleteUser()`. Client: `deleteAccount()` di
+    `auth-context`, session dibersihin → app balik ke layar login.
+  - Deploy: `supabase db push && supabase functions deploy delete-account`.
+- **16 Privacy Policy & Terms of Service.** Draft dwibahasa (id/en) di
+  `src/features/legal/content.ts`, disesuaikan sama data yang app kumpulin
+  (email, no HP, foto bukti, data grup/tagihan; Supabase; OCR lewat
+  Anthropic). Layar statis `src/app/(app)/legal.tsx` (`?doc=privacy|terms`),
+  link di Pengaturan section "LEGAL".
+  - ⚠️ `CONTACT_EMAIL` = `support@kongsi.app` (placeholder) — ganti ke email
+    yang beneran dipantau sebelum submit. Kalau store butuh URL publik,
+    host teks yang sama di web.
+  - Draft, bukan nasihat hukum — review dulu sebelum launch.
+- **17 Metadata build production.** `app.json`: `ios.bundleIdentifier` +
+  `android.package` = `com.app.kongsi`, `ios.buildNumber` "1",
+  `android.versionCode` 1. `name` "Kongsi", `version` "1.0.0", `slug`
+  "billsapp" (dibiarin — kepake EAS project). Icon + splash udah pakai
+  logo final rebrand (`scripts/gen-logo.mjs`).
+- Tes: `settings-legal.rtest.tsx` (2) — Hapus Akun konfirmasi dulu +
+  layar Legal render dua dokumen.
+
 ## Cara jalanin
 
 ```bash
 npm test            # 58 domain test (tsx)
-npm run test:render # 9 render smoke test (jest-expo)
+npm run test:render # 11 render smoke test (jest-expo)
 npm run typecheck   # bersih
 npm start           # atau: npx expo start --tunnel
 ```

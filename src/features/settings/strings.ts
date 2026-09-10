@@ -92,6 +92,7 @@ export const STRINGS = {
   'nav.groupLogin': { id: 'Masuk grup', en: 'Enter group' },
   'nav.group': { id: 'Grup', en: 'Group' },
   'nav.addBill': { id: 'Tambah tagihan', en: 'Add bill' },
+  'nav.legal': { id: 'Legal', en: 'Legal' },
 
   // --- home ---
   'home.tagline': {
@@ -141,6 +142,27 @@ export const STRINGS = {
   'settings.langId': { id: 'Indonesia', en: 'Indonesian' },
   'settings.langEn': { id: 'English', en: 'English' },
   'settings.signOut': { id: 'Keluar', en: 'Sign out' },
+  'settings.legal': { id: 'LEGAL', en: 'LEGAL' },
+  'settings.privacy': { id: 'Kebijakan Privasi', en: 'Privacy Policy' },
+  'settings.terms': { id: 'Syarat & Ketentuan', en: 'Terms of Service' },
+  'settings.deleteAccount': { id: 'Hapus Akun', en: 'Delete account' },
+  'settings.deleting': { id: 'Menghapus akun…', en: 'Deleting account…' },
+  'settings.deleteTitle': {
+    id: 'Hapus akun ini?',
+    en: 'Delete this account?',
+  },
+  'settings.deleteBody': {
+    id: 'Akun, nomor HP, dan data pribadi kamu akan dihapus permanen. Kamu akan dikeluarkan dari semua grup. Grup yang masih punya anggota lain tetap ada; grup tanpa anggota aktif lain akan ikut terhapus beserta tagihannya. Tindakan ini tidak bisa dibatalkan.',
+    en: 'Your account, phone number and personal data will be permanently deleted. You will be removed from every group. Groups that still have other members stay; a group with no other active members is deleted along with its bills. This cannot be undone.',
+  },
+  'settings.deleteCta': {
+    id: 'Ya, hapus akun saya',
+    en: 'Yes, delete my account',
+  },
+  'settings.deleteFailed': {
+    id: 'Gagal menghapus akun',
+    en: "Couldn't delete your account",
+  },
 
   // --- create group ---
   'create.subtitle': {

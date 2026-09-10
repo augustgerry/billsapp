@@ -1,4 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
@@ -11,10 +13,37 @@ import { useThemePreference } from '@/features/settings/theme-preference';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function SettingsScreen() {
-  const { email, wa, signOut } = useAuth();
+  const { email, wa, signOut, deleteAccount } = useAuth();
   const { pref, setPref } = useThemePreference();
   const { lang, setLang, t } = useLocale();
   const c = useTheme();
+  const [deleting, setDeleting] = useState(false);
+
+  async function runDelete() {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // session is cleared → the (app) layout redirects to the auth stack.
+    } catch (e) {
+      setDeleting(false);
+      Alert.alert(
+        t('settings.deleteFailed'),
+        e instanceof Error ? e.message : t('common.retry'),
+      );
+    }
+  }
+
+  function confirmDelete() {
+    if (deleting) return;
+    Alert.alert(t('settings.deleteTitle'), t('settings.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('settings.deleteCta'),
+        style: 'destructive',
+        onPress: () => void runDelete(),
+      },
+    ]);
+  }
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
@@ -57,12 +86,48 @@ export default function SettingsScreen() {
         onChange={setLang}
       />
 
+      <ThemedText themeColor="textFaint" style={styles.label}>
+        {t('settings.legal')}
+      </ThemedText>
+      <View style={[styles.card, { backgroundColor: c.surface }]}>
+        <Pressable
+          style={[styles.row, { borderTopColor: c.border }]}
+          onPress={() =>
+            router.push({ pathname: '/(app)/legal', params: { doc: 'privacy' } })
+          }
+        >
+          <ThemedText themeColor="textSecondary">
+            {t('settings.privacy')}
+          </ThemedText>
+          <ThemedText themeColor="textFaint">›</ThemedText>
+        </Pressable>
+        <Pressable
+          style={[styles.row, { borderTopColor: c.border }]}
+          onPress={() =>
+            router.push({ pathname: '/(app)/legal', params: { doc: 'terms' } })
+          }
+        >
+          <ThemedText themeColor="textSecondary">{t('settings.terms')}</ThemedText>
+          <ThemedText themeColor="textFaint">›</ThemedText>
+        </Pressable>
+      </View>
+
       <View style={styles.spacer} />
       <Button
         label={t('settings.signOut')}
         variant="danger"
         onPress={() => void signOut()}
       />
+      <Pressable
+        onPress={confirmDelete}
+        disabled={deleting}
+        style={styles.deleteRow}
+        accessibilityRole="button"
+      >
+        <ThemedText style={[styles.deleteText, { color: c.danger }]}>
+          {deleting ? t('settings.deleting') : t('settings.deleteAccount')}
+        </ThemedText>
+      </Pressable>
     </Screen>
   );
 }
@@ -79,4 +144,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   spacer: { flex: 1, minHeight: Spacing.four },
+  deleteRow: { alignItems: 'center', paddingVertical: Spacing.three },
+  deleteText: { fontSize: 14, fontWeight: '600' },
 });

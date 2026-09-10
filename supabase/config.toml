@@ -20,3 +20,7 @@ verify_jwt = true
 
 [functions.notify-proof]
 verify_jwt = true
+
+[functions.delete-account]
+# Must be signed in to delete your own account.
+verify_jwt = true
