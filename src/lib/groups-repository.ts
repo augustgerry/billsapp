@@ -3,12 +3,6 @@
 import type { Group, Member } from '@/types/models';
 import { supabase } from './supabase';
 import { groupFromRows } from './mappers';
-import type {
-  BillRow,
-  GroupMemberRow,
-  GroupRow,
-  JoinLookupRow,
-} from './database.types';
 
 export interface JoinLookup {
   groupId: string;
@@ -23,7 +17,7 @@ export async function lookupGroupForJoin(code: string): Promise<JoinLookup> {
     p_code: code.trim(),
   });
   if (error) throw new Error(error.message);
-  const row = (data as JoinLookupRow[] | null)?.[0];
+  const row = data?.[0];
   if (!row) throw new Error('Kode grup tidak ditemukan');
   return { groupId: row.group_id, name: row.name, memberName: row.member_name };
 }
@@ -46,8 +40,7 @@ export async function createGroup(
     })),
   });
   if (error) throw new Error(error.message);
-  const row = data as GroupRow;
-  return { groupId: row.id, code: row.code };
+  return { groupId: data.id, code: data.code };
 }
 
 /** "Duplikat" from Home — new group, same members, no bills. */
@@ -58,8 +51,7 @@ export async function duplicateGroup(
     p_group_id: groupId,
   });
   if (error) throw new Error(error.message);
-  const row = data as GroupRow;
-  return { groupId: row.id, code: row.code };
+  return { groupId: data.id, code: data.code };
 }
 
 /**
@@ -84,9 +76,9 @@ export async function fetchGroup(groupId: string): Promise<Group> {
   if (membersRes.error) throw new Error(membersRes.error.message);
   if (billsRes.error) throw new Error(billsRes.error.message);
   return groupFromRows(
-    groupRes.data as GroupRow,
-    (membersRes.data ?? []) as GroupMemberRow[],
-    (billsRes.data ?? []) as BillRow[],
+    groupRes.data,
+    membersRes.data ?? [],
+    billsRes.data ?? [],
   );
 }
 

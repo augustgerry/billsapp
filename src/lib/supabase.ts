@@ -4,6 +4,7 @@ import { AppState, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from './database.types';
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from './env';
 
 /**
@@ -64,7 +65,7 @@ const chunkedSecureStore = {
 
 // createClient throws on an empty URL, so fall back to a placeholder when the
 // project is unconfigured. `isSupabaseConfigured` gates the UI before any call.
-export const supabase: SupabaseClient = createClient(
+export const supabase: SupabaseClient<Database> = createClient<Database>(
   SUPABASE_URL || 'https://placeholder.supabase.co',
   SUPABASE_ANON_KEY || 'public-anon-key-placeholder',
   {

@@ -6,7 +6,6 @@
 import type { Bill, BillId, Group, MonthKey, MonthRecord } from '@/types/models';
 import { supabase } from './supabase';
 import { assembleMonth, billMonthToRow, paymentToRow } from './mappers';
-import type { BillMonthRow, PaymentRow } from './database.types';
 
 async function billIdsForGroup(groupId: string): Promise<BillId[]> {
   const { data, error } = await supabase
@@ -14,7 +13,7 @@ async function billIdsForGroup(groupId: string): Promise<BillId[]> {
     .select('id')
     .eq('group_id', groupId);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as { id: string }[]).map((r) => r.id);
+  return (data ?? []).map((r) => r.id);
 }
 
 /** Load one month's records for every bill in the group. */
@@ -38,10 +37,7 @@ export async function loadMonth(
   ]);
   if (billMonths.error) throw new Error(billMonths.error.message);
   if (payments.error) throw new Error(payments.error.message);
-  return assembleMonth(
-    (billMonths.data ?? []) as BillMonthRow[],
-    (payments.data ?? []) as PaymentRow[],
-  );
+  return assembleMonth(billMonths.data ?? [], payments.data ?? []);
 }
 
 /** Load every month (for the trend chart / export). */
@@ -57,8 +53,8 @@ export async function loadAllMonths(
   if (billMonths.error) throw new Error(billMonths.error.message);
   if (payments.error) throw new Error(payments.error.message);
 
-  const billMonthRows = (billMonths.data ?? []) as BillMonthRow[];
-  const paymentRows = (payments.data ?? []) as PaymentRow[];
+  const billMonthRows = billMonths.data ?? [];
+  const paymentRows = payments.data ?? [];
   const byMonth: Group['monthly'] = {};
   const months = new Set<MonthKey>([
     ...billMonthRows.map((r) => r.month),

@@ -4,7 +4,6 @@
  */
 
 import { supabase } from './supabase';
-import type { GroupRow, RecentGroupRow } from './database.types';
 
 export interface RecentGroupItem {
   groupId: string;
@@ -26,7 +25,7 @@ export async function listRecentGroups(): Promise<RecentGroupItem[]> {
     .order('opened_at', { ascending: false })
     .limit(10);
   if (error) throw new Error(error.message);
-  const recentRows = (recents ?? []) as RecentGroupRow[];
+  const recentRows = recents ?? [];
   if (recentRows.length === 0) return [];
 
   const ids = recentRows.map((r) => r.group_id);
@@ -36,8 +35,7 @@ export async function listRecentGroups(): Promise<RecentGroupItem[]> {
     .in('id', ids);
   if (gErr) throw new Error(gErr.message);
 
-  const groupRows = (groups ?? []) as Pick<GroupRow, 'id' | 'code' | 'name'>[];
-  const byId = new Map(groupRows.map((g) => [g.id, g]));
+  const byId = new Map((groups ?? []).map((g) => [g.id, g]));
   return recentRows.flatMap((r) => {
     const g = byId.get(r.group_id);
     return g

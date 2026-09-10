@@ -3,7 +3,6 @@
 import type { Bill } from '@/types/models';
 import { supabase } from './supabase';
 import { billFromRow, billToRow } from './mappers';
-import type { BillRow } from './database.types';
 
 /** Insert a new recurring bill. `input` is a Bill without an id. */
 export async function insertBill(
@@ -16,7 +15,7 @@ export async function insertBill(
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return billFromRow(data as BillRow);
+  return billFromRow(data);
 }
 
 /** "Edit nominal" — only the responsible member (guard in UI; RLS is broad). */

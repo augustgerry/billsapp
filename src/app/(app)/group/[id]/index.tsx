@@ -25,7 +25,7 @@ import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
 import { useGroupRealtime } from '@/features/groups/use-group-realtime';
 import { OwedCard } from '@/features/summary/owed-card';
 import { TrendChart } from '@/features/summary/trend-chart';
-import { exportRekapCsv } from '@/features/summary/export-rekap';
+import { exportRekapCsv, exportRekapPdf } from '@/features/summary/export-rekap';
 import { useTheme } from '@/hooks/use-theme';
 import {
   buildReminderText,
@@ -273,20 +273,38 @@ export default function GroupScreen() {
               Tren pengeluaran bulanan
             </ThemedText>
             <TrendChart data={computeMonthlyCategoryTotals(group)} />
-            <Button
-              label="Export ke Excel (CSV)"
-              variant="secondary"
-              onPress={async () => {
-                try {
-                  await exportRekapCsv(group);
-                } catch (e) {
-                  Alert.alert(
-                    'Gagal export',
-                    e instanceof Error ? e.message : 'Coba lagi',
-                  );
-                }
-              }}
-            />
+            <View style={styles.exportRow}>
+              <Button
+                label="Export CSV"
+                variant="secondary"
+                style={styles.flex1}
+                onPress={async () => {
+                  try {
+                    await exportRekapCsv(group);
+                  } catch (e) {
+                    Alert.alert(
+                      'Gagal export',
+                      e instanceof Error ? e.message : 'Coba lagi',
+                    );
+                  }
+                }}
+              />
+              <Button
+                label="Export PDF"
+                variant="secondary"
+                style={styles.flex1}
+                onPress={async () => {
+                  try {
+                    await exportRekapPdf(group);
+                  } catch (e) {
+                    Alert.alert(
+                      'Gagal export',
+                      e instanceof Error ? e.message : 'Coba lagi',
+                    );
+                  }
+                }}
+              />
+            </View>
           </View>
 
           <View style={[styles.hero, { backgroundColor: c.surface }]}>
@@ -327,6 +345,8 @@ const styles = StyleSheet.create({
   members: { marginTop: -Spacing.two },
   hero: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
   blockTitle: { fontSize: 16, fontWeight: '700' },
+  exportRow: { flexDirection: 'row', gap: Spacing.two },
+  flex1: { flex: 1 },
   reminderBox: { borderRadius: 10, padding: Spacing.three },
   reminderText: { fontSize: 13, lineHeight: 19 },
   heroRow: { flexDirection: 'row', gap: Spacing.four },

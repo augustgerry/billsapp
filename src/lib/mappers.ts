@@ -10,13 +10,16 @@
 
 import type {
   Bill,
+  BillCategory,
   BillId,
+  BillType,
   Group,
   Member,
   MemberName,
   MemberPayment,
   MonthKey,
   MonthRecord,
+  PaymentStatus,
 } from '@/types/models';
 import type {
   BillMonthRow,
@@ -24,6 +27,7 @@ import type {
   GroupMemberRow,
   GroupRow,
   PaymentRow,
+  TablesInsert,
 } from './database.types';
 
 // --- rows -> domain -------------------------------------------------------
@@ -36,8 +40,8 @@ export function billFromRow(row: BillRow): Bill {
   const bill: Bill = {
     id: row.id,
     name: row.name,
-    category: row.category,
-    type: row.type,
+    category: row.category as BillCategory,
+    type: row.type as BillType,
     responsible: row.responsible,
     splitMembers: row.split_members ?? [],
     estimate: Number(row.estimate),
@@ -58,7 +62,7 @@ export function billFromRow(row: BillRow): Bill {
 
 export function paymentFromRow(row: PaymentRow): MemberPayment {
   return {
-    status: row.status,
+    status: row.status as PaymentStatus,
     amount: row.amount != null ? Number(row.amount) : null,
     proofImage: row.proof_path,
     uploadedAt: row.uploaded_at ? Date.parse(row.uploaded_at) : null,
@@ -113,7 +117,7 @@ export function groupFromRows(
 export function billToRow(
   bill: Omit<Bill, 'id'> & { id?: string },
   groupId: string,
-): Partial<BillRow> {
+): TablesInsert<'bills'> {
   return {
     ...(bill.id ? { id: bill.id } : {}),
     group_id: groupId,
@@ -137,7 +141,7 @@ export function billMonthToRow(
   billId: BillId,
   month: MonthKey,
   record: MonthRecord,
-): Partial<BillMonthRow> {
+): TablesInsert<'bill_months'> {
   return {
     bill_id: billId,
     month,
@@ -151,7 +155,7 @@ export function paymentToRow(
   month: MonthKey,
   member: MemberName,
   payment: MemberPayment,
-): Partial<PaymentRow> {
+): TablesInsert<'payments'> {
   return {
     bill_id: billId,
     month,
