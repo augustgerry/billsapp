@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
 import { useTheme } from '@/hooks/use-theme';
+import { countGroupAttention } from '@/lib/attention-repository';
 import {
   duplicateGroup,
   listInvites,
@@ -27,22 +28,36 @@ export default function HomeScreen() {
   const c = useTheme();
   const [recents, setRecents] = useState<RecentGroupItem[] | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [attention, setAttention] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [busyInvite, setBusyInvite] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setError(null);
-    listRecentGroups()
-      .then(setRecents)
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : 'Gagal memuat daftar grup'),
-      );
     listInvites()
       .then(setInvites)
       .catch(() => setInvites([]));
-  }, []);
+    try {
+      const items = await listRecentGroups();
+      setRecents(items);
+      if (email) {
+        countGroupAttention(
+          items.map((r) => r.groupId),
+          email,
+        )
+          .then(setAttention)
+          .catch(() => setAttention({}));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memuat daftar grup');
+    }
+  }, [email]);
 
-  useFocusEffect(load);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   function openGroup(item: { groupId: string; name: string }) {
     router.push({
@@ -159,22 +174,32 @@ export default function HomeScreen() {
           <ThemedText themeColor="textFaint" style={styles.sectionLabel}>
             LANJUTKAN
           </ThemedText>
-          {recents.map((item) => (
-            <Pressable
-              key={item.groupId}
-              onPress={() => openGroup(item)}
-              onLongPress={() => rowActions(item)}
-              style={({ pressed }) => [
-                styles.recentRow,
-                { backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <ThemedText style={styles.recentName}>{item.name}</ThemedText>
-              <ThemedText themeColor="textFaint" style={styles.recentCode}>
-                {item.code}
-              </ThemedText>
-            </Pressable>
-          ))}
+          {recents.map((item) => {
+            const badge = attention[item.groupId] ?? 0;
+            return (
+              <Pressable
+                key={item.groupId}
+                onPress={() => openGroup(item)}
+                onLongPress={() => rowActions(item)}
+                style={({ pressed }) => [
+                  styles.recentRow,
+                  { backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <ThemedText style={styles.recentName}>{item.name}</ThemedText>
+                {badge > 0 ? (
+                  <View style={[styles.badge, { backgroundColor: c.danger }]}>
+                    <ThemedText style={styles.badgeText}>
+                      {badge > 9 ? '9+' : badge}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                <ThemedText themeColor="textFaint" style={styles.recentCode}>
+                  {item.code}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
           <ThemedText themeColor="textFaint" style={styles.hint}>
             Tekan lama untuk duplikat / hapus dari daftar.
           </ThemedText>
@@ -218,6 +243,16 @@ const styles = StyleSheet.create({
   recentName: { fontSize: 15, fontWeight: '600', flex: 1 },
   recentCode: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   hint: { fontSize: 12 },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.two,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   inviteRow: {
     flexDirection: 'row',
     alignItems: 'center',

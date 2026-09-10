@@ -26,6 +26,7 @@ import {
   perInstallmentFromTotal,
   readMonthRecord,
   requiredMembers,
+  responsibleActionCount,
 } from './billing';
 
 const MONTH = '2026-09';
@@ -388,6 +389,26 @@ test('applyReupload: review -> unpaid, proof dropped, ready to retry', () => {
     uploadedAt: null,
   });
   assert.equal(rec.payments.Kaka.status, 'review'); // input untouched
+});
+
+test('responsibleActionCount: PJ-only, counts awaiting + single review', () => {
+  const rec: MonthRecord = {
+    amount: null,
+    payments: {
+      Kaka: { status: 'awaiting', amount: 1, proofImage: 'x', uploadedAt: 1 },
+      Nina: { status: 'review', amount: 1, proofImage: 'y', uploadedAt: 1 },
+      Budi: { status: 'paid', amount: 1, proofImage: 'z', uploadedAt: 1 },
+    },
+  };
+  // split bill: only awaiting counts (PJ can't act on split review)
+  assert.equal(responsibleActionCount(splitBill(), rec, 'Gerry'), 1);
+  // not the PJ -> 0
+  assert.equal(responsibleActionCount(splitBill(), rec, 'Kaka'), 0);
+  // single bill: awaiting + own review both count
+  assert.equal(
+    responsibleActionCount(singleBill(), rec, 'Gerry'),
+    2,
+  );
 });
 
 test('canReupload: only the member whose payment it is', () => {

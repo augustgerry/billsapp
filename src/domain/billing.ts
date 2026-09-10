@@ -163,6 +163,26 @@ export function maybeAdvanceInstallment(
   return true;
 }
 
+/**
+ * How many payments on this bill/month the responsible member still needs to
+ * act on: every `awaiting` payment (confirm / reject), plus a `review` on a
+ * single-type bill (their own, "Tandai valid"). 0 for anyone who isn't the PJ.
+ * Drives the Home "Lanjutkan" attention badge.
+ */
+export function responsibleActionCount(
+  bill: Bill,
+  record: MonthRecord,
+  user: MemberName,
+): number {
+  if (user !== bill.responsible || isInstallmentDone(bill)) return 0;
+  let n = 0;
+  for (const payment of Object.values(record.payments)) {
+    if (payment.status === 'awaiting') n += 1;
+    else if (payment.status === 'review' && bill.type === 'single') n += 1;
+  }
+  return n;
+}
+
 // ---------------------------------------------------------------------------
 // Permission checks (UI gating; Supabase RLS enforces the real boundary)
 // ---------------------------------------------------------------------------
