@@ -36,12 +36,12 @@ export async function exportRekapCsv(
   group: Group,
   locale: Locale = 'id',
 ): Promise<void> {
+  const en = locale === 'en';
   const rows = buildExportRows(group, locale);
   if (rows.length === 0) {
-    throw new Error(locale === 'en' ? 'No data to export yet.' : 'Belum ada data buat diekspor.');
+    throw new Error(en ? 'Nothing to export yet.' : 'Belum ada data untuk diekspor.');
   }
 
-  const en = locale === 'en';
   const csv = [
     (en
       ? ['Month', 'Bill', 'Category', 'Amount', 'Type']
@@ -58,7 +58,9 @@ export async function exportRekapCsv(
   });
 
   if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Sharing is not available on this device.');
+    throw new Error(
+      en ? 'Sharing is not available on this device.' : 'Berbagi tidak tersedia di perangkat ini.',
+    );
   }
   await Sharing.shareAsync(uri, {
     mimeType: 'text/csv',
@@ -75,7 +77,7 @@ export async function exportRekapPdf(
   const en = locale === 'en';
   const rows = buildExportRows(group, locale);
   if (rows.length === 0) {
-    throw new Error(en ? 'No data to export yet.' : 'Belum ada data buat diekspor.');
+    throw new Error(en ? 'Nothing to export yet.' : 'Belum ada data untuk diekspor.');
   }
 
   const total = rows.reduce((sum, r) => sum + r.nominal, 0);
@@ -118,7 +120,9 @@ export async function exportRekapPdf(
 
   const { uri } = await Print.printToFileAsync({ html });
   if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Sharing is not available on this device.');
+    throw new Error(
+      en ? 'Sharing is not available on this device.' : 'Berbagi tidak tersedia di perangkat ini.',
+    );
   }
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',

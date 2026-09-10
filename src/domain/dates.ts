@@ -116,7 +116,13 @@ export function daysStatus(
       overdue: false,
     };
   }
-  return { text: `H-${diffDays}`, overdue: false };
+  return {
+    text:
+      locale === 'en'
+        ? `in ${diffDays} day${diffDays > 1 ? 's' : ''}`
+        : `H-${diffDays}`,
+    overdue: false,
+  };
 }
 
 /** "9 Sep 2026, 14:05" */

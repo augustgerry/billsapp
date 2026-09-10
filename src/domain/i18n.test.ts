@@ -12,6 +12,8 @@ test('dates: en vs id', () => {
   assert.equal(daysStatus(5, NOON_SEP_10, 'en').text, '5 days late');
   assert.equal(daysStatus(5, NOON_SEP_10, 'id').text, 'Telat 5 hari');
   assert.equal(daysStatus(10, NOON_SEP_10, 'en').text, 'Due today');
+  assert.equal(daysStatus(15, NOON_SEP_10, 'en').text, 'in 5 days');
+  assert.equal(daysStatus(15, NOON_SEP_10, 'id').text, 'H-5');
 });
 
 test('billMetaText: en', () => {

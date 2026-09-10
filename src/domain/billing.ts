@@ -710,7 +710,8 @@ export function buildExportRows(
               : 'Satu orang'
             : en
               ? 'Split'
-              : 'Dibagi rata') + (bill.tenor ? ' (Cicilan)' : ''),
+              : 'Dibagi rata') +
+          (bill.tenor ? (en ? ' (Installment)' : ' (Cicilan)') : ''),
       });
     }
   }
