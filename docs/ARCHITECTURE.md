@@ -9,21 +9,26 @@ React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
 |---|---|---|
 | Tipe domain | `src/types/models.ts` | 1:1 dengan data model di brief |
 | Logika billing/cicilan/status | `src/domain/{billing,money,dates}.ts` | port murni, dependency-free |
-| Unit test | `src/**/*.test.ts` | 50 test, `npm test` (pakai `tsx`) |
-| Skema DB + RLS | `supabase/migrations/20260909000000_init.sql` | **applied** ke project `wyhihlddtnbyqvjutjyf` (7 tabel, RLS on, RPC, bucket `proofs`) |
-| Edge Function OCR | `supabase/functions/read-proof/` | **deployed + ACTIVE**, secret `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL=claude-sonnet-5` set. ⚠️ akun Anthropic $0 credit — OCR balikin error sampai di-top-up |
-| Supabase client | `src/lib/supabase.ts` | session di `expo-secure-store` (chunked) |
-| Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, di-wire di root `_layout` |
-| Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, semua lewat RLS |
+| Unit test | `src/**/*.test.ts` | 51 test, `npm test` (pakai `tsx`) |
+| Skema DB + RLS | `supabase/migrations/*.sql` | **applied** ke `wyhihlddtnbyqvjutjyf` (8 tabel, RLS on, RPC, bucket `proofs`, trigger edit-nominal, realtime publication) |
+| Edge Function OCR | `supabase/functions/read-proof/` | **deployed** (v2). Balikin amount + isReceipt + platform + suspiciousNote. ⚠️ akun Anthropic $0 credit — OCR error sampai di-top-up |
+| Edge Function notify | `supabase/functions/notify-proof/` | **deployed**. Push ke PJ abis upload bukti (service role) |
+| Supabase client | `src/lib/supabase.ts` | typed `createClient<Database>` (generated `database.types.ts`), session di `expo-secure-store` (chunked) |
+| Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, + registrasi push token, di-wire di root `_layout` |
+| Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, typed, semua lewat RLS |
+| Push notifications | `src/features/notifications/*` | token registration + notify-proof caller — butuh dev build (lihat docs/PUSH_SETUP.md) |
+| Realtime | `src/features/groups/use-group-realtime.ts` | dashboard auto-refresh pas anggota lain update |
+| Tema | `src/features/settings/theme-preference.tsx` | Terang/Gelap/Ikuti Sistem, persist SecureStore; light palette di `constants/theme.ts` |
 | Routing auth-gated | `src/app/_layout.tsx` + `(auth)/` `(app)/` | Stack + guard + Supabase config gate |
 | Layar auth | `src/app/(auth)/{login,register,verify}.tsx` | fungsional, Enter submit, tombol disable |
 | Layar Home / Buat / Join / Login grup | `src/app/(app)/*` | fungsional (recent list, create RPC, join lookup, PIN) |
 | Tambah tagihan | `src/app/(app)/group/[id]/add-bill.tsx` | fungsional — kategori, tanggal manual, single/split, blok Cicilan |
 | Dashboard tab Tagihan | `src/app/(app)/group/[id]/index.tsx` + `features/bills/bill-card.tsx` | fungsional — hero kontribusi, card per bill, expand rincian, Edit nominal |
 | Upload bukti + alur status | `features/bills/{proof-actions,pick-proof-image}.ts` | fungsional — upload→OCR→status, self-declare/confirm/reject/reupload, lunasi dipercepat single, lihat bukti |
-| Dashboard tab Ringkasan | `features/summary/*` | fungsional — "siapa belum bayar", chart tren (Views), export CSV, generator reminder + salin |
+| Dashboard tab Ringkasan | `features/summary/*` | fungsional — "siapa belum bayar", chart tren (Views), export CSV + PDF, generator reminder + salin |
+| Pengaturan | `src/app/(app)/settings.tsx` | info akun, toggle tema, keluar |
 
-Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih; 50 test lulus.
+Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih; 51 test lulus.
 
 ## Struktur folder
 
@@ -183,35 +188,32 @@ npm start        # expo dev server (butuh .env terisi)
 
 ## Langkah berikutnya
 
-Sudah kelar: repository layer, routing, layar auth, Home, Buat/Join/Login grup,
-**Tambah tagihan** (§5), **Dashboard tab Tagihan** (§6a), **Upload bukti + alur
-status + lunasi dipercepat single** (§7), **Dashboard tab Ringkasan** (§6b),
-**edge function `read-proof` deployed**.
-
-Sisanya:
+Semua item brief + 5 penambahan (OCR anti-fraud, push, realtime, light mode,
+hardening) sudah kelar. Sisanya:
 
 1. **Top-up kredit Anthropic** — function jalan tapi API balikin "credit
    balance too low". Sampai di-isi, upload bukti masuk `review` (nggak
-   auto-`paid`).
-2. Realtime (`supabase.channel`) biar dashboard update pas anggota lain bayar.
-3. Polish gaya dark/iOS dari prototipe (spacing, card, badge, animasi, salin
-   kode grup, custom date picker popup, dsb).
-4. Hardening: RLS `bills` UPDATE dipersempit (Edit nominal = PJ), rate-limit
-   OCR, resize gambar sebelum upload (`expo-image-manipulator`), export PDF.
-5. Jalanin `supabase gen types typescript` → balikin `<Database>` generic di
-   `supabase.ts`, hapus cast manual di repo.
+   auto-`paid`). Semua alur status lain jalan tanpa OCR.
+2. **Dev build buat push** — `eas init` + `eas build --profile development`
+   (lihat `docs/PUSH_SETUP.md`). Kode push sudah ada, no-op tanpa `projectId`.
+3. **Email OTP template** — pastiin `{{ .Token }}` (atau matiin "Confirm
+   email" buat dev). Lihat `docs/SUPABASE_SETUP.md`.
+4. Polish gaya iOS dari prototipe (spacing, animasi, salin kode grup, custom
+   date-picker popup, empty states).
+5. Resize gambar bukti sebelum upload (`expo-image-manipulator`).
+6. Deep-link dari notif ke layar grup (`data.groupId` udah dikirim).
 
-Yang ditunda (brief): push/WhatsApp asli, lunasi-dipercepat untuk split,
+Yang ditunda (brief): WhatsApp API asli, lunasi-dipercepat untuk split,
 fitur agentic.
 
 ### Catatan / utang teknis
 
-- Akun Anthropic $0 credit → OCR error sampai di-top-up di
-  console.anthropic.com. Key + model udah keset sebagai Supabase secret.
-- Supabase client belum di-generic-type (`Database`) — repo pakai cast manual
-  ke row types.
-- RLS `bills` UPDATE masih lebar (semua anggota). "Edit nominal = PJ only"
-  baru di UI.
-- Gambar bukti belum di-resize sebelum upload (cuma `quality: 0.6` di picker).
-- Export cuma CSV (buka di Excel/Sheets). PDF dari prototipe belum diport.
-- `app-tabs`, `animated-icon`, dll dari template starter udah dihapus.
+- Akun Anthropic $0 credit → OCR error sampai di-top-up. Key + model keset
+  sebagai Supabase secret.
+- Push: butuh dev build + EAS `projectId`; no-op sampai itu ada.
+- Notif client-driven (abis `submitProof`) — DB trigger + `pg_net` lebih
+  tahan banting.
+- "Member lain yang relevan" belum di-fan-out — cuma PJ.
+- Gambar bukti belum di-resize (cuma `quality: 0.6` di picker).
+- Migrasi lokal diedit in-place beberapa kali; `supabase db reset` bakal
+  replay bener. Fungsi/skema di DB live udah sinkron.
