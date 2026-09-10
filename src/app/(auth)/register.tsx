@@ -9,33 +9,46 @@ import { TextLink } from '@/components/ui/text-link';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
+import {
+  DEFAULT_COUNTRY,
+  isValidLocalNumber,
+  toE164,
+  type Country,
+} from '@/features/auth/country-codes';
+import { PhoneField } from '@/features/auth/phone-field';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const WA_RE = /^0\d{9,13}$/;
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [wa, setWa] = useState('');
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const pwRef = useRef<TextInput>(null);
-  const waRef = useRef<TextInput>(null);
 
   const emailOk = EMAIL_RE.test(email.trim());
   const passOk = password.length >= 6;
-  const waOk = WA_RE.test(wa.trim());
-  const valid = emailOk && passOk && waOk;
+  const phoneOk = isValidLocalNumber(phone);
+  const valid = emailOk && passOk && phoneOk;
 
   async function submit() {
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const { needsVerification } = await signUp({ email, password, wa });
+      const { needsVerification } = await signUp({
+        email,
+        password,
+        wa: toE164(country.dial, phone),
+      });
       if (needsVerification) {
-        router.push({ pathname: '/(auth)/verify', params: { email: email.trim().toLowerCase() } });
+        router.push({
+          pathname: '/(auth)/verify',
+          params: { email: email.trim().toLowerCase() },
+        });
         setBusy(false);
       }
       // otherwise the session exists and (auth)/_layout redirects
@@ -48,7 +61,9 @@ export default function RegisterScreen() {
   return (
     <Screen>
       <ThemedText type="subtitle">Daftar</ThemedText>
-      <ThemedText themeColor="textSecondary">Buat akun buat mulai pakai Kongsi.</ThemedText>
+      <ThemedText themeColor="textSecondary">
+        Buat akun buat mulai pakai Kongsi.
+      </ThemedText>
 
       <View style={styles.form}>
         <TextField
@@ -62,7 +77,9 @@ export default function RegisterScreen() {
           placeholder="nama@email.com"
           returnKeyType="next"
           onSubmitEditing={() => pwRef.current?.focus()}
-          error={email.length > 0 && !emailOk ? 'Masukkan email yang valid.' : undefined}
+          error={
+            email.length > 0 && !emailOk ? 'Masukkan email yang valid.' : undefined
+          }
         />
         <TextField
           ref={pwRef}
@@ -71,20 +88,20 @@ export default function RegisterScreen() {
           onChangeText={setPassword}
           secureTextEntry
           placeholder="Minimal 6 karakter"
-          returnKeyType="next"
-          onSubmitEditing={() => waRef.current?.focus()}
-          error={password.length > 0 && !passOk ? 'Password minimal 6 karakter.' : undefined}
+          error={
+            password.length > 0 && !passOk
+              ? 'Password minimal 6 karakter.'
+              : undefined
+          }
         />
-        <TextField
-          ref={waRef}
-          label="Nomor WhatsApp"
-          value={wa}
-          onChangeText={(t) => setWa(t.replace(/[^0-9]/g, ''))}
-          keyboardType="phone-pad"
-          placeholder="08123456789"
-          returnKeyType="go"
-          onSubmitEditing={submit}
-          error={wa.length > 0 && !waOk ? 'Contoh: 08123456789.' : undefined}
+        <PhoneField
+          country={country}
+          onChangeCountry={setCountry}
+          number={phone}
+          onChangeNumber={setPhone}
+          error={
+            phone.length > 0 && !phoneOk ? 'Nomor HP nggak valid.' : undefined
+          }
         />
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
         <Button label="Daftar" onPress={submit} disabled={!valid} loading={busy} />

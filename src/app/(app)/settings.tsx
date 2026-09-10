@@ -25,7 +25,7 @@ export default function SettingsScreen() {
           <ThemedText>{email ?? '-'}</ThemedText>
         </View>
         <View style={[styles.row, { borderTopColor: c.border }]}>
-          <ThemedText themeColor="textSecondary">WhatsApp</ThemedText>
+          <ThemedText themeColor="textSecondary">Nomor HP</ThemedText>
           <ThemedText>{wa ?? '-'}</ThemedText>
         </View>
       </View>

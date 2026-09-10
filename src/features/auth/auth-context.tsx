@@ -29,7 +29,7 @@ import { supabase } from '@/lib/supabase';
 export interface SignUpInput {
   email: string;
   password: string;
-  /** Digits only, e.g. "08123456789". */
+  /** Full phone in E.164-ish form, e.g. "+62812345678" (column is named `wa`). */
   wa: string;
 }
 
