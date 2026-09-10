@@ -28,9 +28,11 @@ import type {
   OwedLine,
   PaymentStatus,
 } from '../types/models';
+import type { Locale } from './i18n';
 import { amountMatches } from './money';
 import {
   MONTH_NAMES_SHORT,
+  MONTH_NAMES_SHORT_EN,
   daysStatus,
   monthKeyLabel,
   monthLabel,
@@ -458,37 +460,63 @@ export function billBadge(
   bill: Bill,
   record: MonthRecord,
   now: Date = new Date(),
+  locale: Locale = 'id',
 ): BillBadge {
+  const en = locale === 'en';
   if (isInstallmentDone(bill)) {
-    return { kind: 'installment-done', text: 'Cicilan lunas' };
+    return {
+      kind: 'installment-done',
+      text: en ? 'Installment paid' : 'Cicilan lunas',
+    };
   }
   if (isBillSettledForMonth(bill, record)) {
-    return { kind: 'paid', text: 'Lunas' };
+    return { kind: 'paid', text: en ? 'Paid' : 'Lunas' };
   }
-  const due = daysStatus(bill.dueDay, now);
+  const due = daysStatus(bill.dueDay, now, locale);
   return due.overdue
     ? { kind: 'overdue', text: due.text }
     : { kind: 'due', text: due.text };
 }
 
-/** The grey sub-line under a bill name on the dashboard. Ported verbatim. */
-export function billMetaText(bill: Bill): string {
-  let meta = `Jatuh tempo tgl ${bill.dueDay}`;
+/** The grey sub-line under a bill name on the dashboard. */
+export function billMetaText(bill: Bill, locale: Locale = 'id'): string {
+  const en = locale === 'en';
+  const short = en ? MONTH_NAMES_SHORT_EN : MONTH_NAMES_SHORT;
+  let meta = en ? `Due on the ${bill.dueDay}` : `Jatuh tempo tgl ${bill.dueDay}`;
   if (bill.dueMonth && bill.dueYear) {
-    meta += ` (mulai ${MONTH_NAMES_SHORT[bill.dueMonth - 1]} ${bill.dueYear})`;
+    meta += en
+      ? ` (from ${short[bill.dueMonth - 1]} ${bill.dueYear})`
+      : ` (mulai ${short[bill.dueMonth - 1]} ${bill.dueYear})`;
   }
   if (bill.tenor) {
     meta += isInstallmentDone(bill)
-      ? ` · Cicilan lunas (${bill.tenor}/${bill.tenor})`
-      : ` · Cicilan ke-${currentInstallmentNumber(bill)} dari ${bill.tenor}`;
+      ? en
+        ? ` · Installment paid (${bill.tenor}/${bill.tenor})`
+        : ` · Cicilan lunas (${bill.tenor}/${bill.tenor})`
+      : en
+        ? ` · Installment ${currentInstallmentNumber(bill)} of ${bill.tenor}`
+        : ` · Cicilan ke-${currentInstallmentNumber(bill)} dari ${bill.tenor}`;
     meta +=
       bill.type === 'single'
-        ? ` · PJ: ${bill.responsible}`
-        : ` · Dibagi rata, transfer ke ${bill.responsible}`;
+        ? en
+          ? ` · Responsible: ${bill.responsible}`
+          : ` · PJ: ${bill.responsible}`
+        : en
+          ? ` · Split, transfer to ${bill.responsible}`
+          : ` · Dibagi rata, transfer ke ${bill.responsible}`;
   } else {
-    meta += bill.type === 'single' ? ` · PJ: ${bill.responsible}` : ' · Dibagi rata';
+    meta +=
+      bill.type === 'single'
+        ? en
+          ? ` · Responsible: ${bill.responsible}`
+          : ` · PJ: ${bill.responsible}`
+        : en
+          ? ' · Split evenly'
+          : ' · Dibagi rata';
   }
-  if (bill.lender) meta += ` · Pinjaman dari ${bill.lender}`;
+  if (bill.lender) {
+    meta += en ? ` · Loan from ${bill.lender}` : ` · Pinjaman dari ${bill.lender}`;
+  }
   return meta;
 }
 
@@ -575,22 +603,36 @@ export function buildReminderText(
   group: Group,
   month: MonthKey,
   now: Date = new Date(),
+  locale: Locale = 'id',
 ): string {
+  const en = locale === 'en';
   const lines: string[] = [];
   for (const bill of group.bills) {
     if (isInstallmentDone(bill)) continue;
     const record = readMonthRecord(group, month, bill.id);
     for (const m of requiredMembers(bill)) {
       if (paymentStatus(record, m) !== 'paid') {
-        const to =
-          bill.type === 'split' ? ` (transfer ke ${bill.responsible})` : '';
-        lines.push(`- ${m} belum bayar bagian "${bill.name}"${to}`);
+        if (en) {
+          const to =
+            bill.type === 'split' ? ` (transfer to ${bill.responsible})` : '';
+          lines.push(`- ${m} hasn't paid their share of "${bill.name}"${to}`);
+        } else {
+          const to =
+            bill.type === 'split' ? ` (transfer ke ${bill.responsible})` : '';
+          lines.push(`- ${m} belum bayar bagian "${bill.name}"${to}`);
+        }
       }
     }
   }
-  return lines.length
-    ? `Pengingat tagihan ${group.name} bulan ${monthLabel(now)}:\n${lines.join('\n')}`
-    : `Semua tagihan bulan ${monthLabel(now)} sudah beres. Mantap!`;
+  const ml = monthLabel(now, locale);
+  if (lines.length) {
+    return en
+      ? `${group.name} bill reminder for ${ml}:\n${lines.join('\n')}`
+      : `Pengingat tagihan ${group.name} bulan ${ml}:\n${lines.join('\n')}`;
+  }
+  return en
+    ? `All ${ml} bills are settled. Nice!`
+    : `Semua tagihan bulan ${ml} sudah beres. Mantap!`;
 }
 
 // ---------------------------------------------------------------------------
@@ -606,6 +648,7 @@ export interface MonthlyCategoryTotals {
 
 export function computeMonthlyCategoryTotals(
   group: Group,
+  locale: Locale = 'id',
 ): MonthlyCategoryTotals[] {
   return Object.keys(group.monthly)
     .sort()
@@ -619,7 +662,7 @@ export function computeMonthlyCategoryTotals(
         byCategory[bill.category] = (byCategory[bill.category] ?? 0) + amount;
       }
       const total = Object.values(byCategory).reduce((a, b) => a + b, 0);
-      return { key, label: monthKeyLabel(key), total, byCategory };
+      return { key, label: monthKeyLabel(key, locale), total, byCategory };
     });
 }
 
@@ -631,7 +674,11 @@ export interface ExportRow {
   tipe: string;
 }
 
-export function buildExportRows(group: Group): ExportRow[] {
+export function buildExportRows(
+  group: Group,
+  locale: Locale = 'id',
+): ExportRow[] {
+  const en = locale === 'en';
   const rows: ExportRow[] = [];
   for (const monthKey of Object.keys(group.monthly).sort()) {
     for (const billId of Object.keys(group.monthly[monthKey])) {
@@ -639,13 +686,18 @@ export function buildExportRows(group: Group): ExportRow[] {
       if (!bill) continue;
       const record = group.monthly[monthKey][billId];
       rows.push({
-        bulan: monthKeyLabel(monthKey),
+        bulan: monthKeyLabel(monthKey, locale),
         tagihan: bill.name,
         kategori: bill.category,
         nominal: record.amount ?? bill.estimate,
         tipe:
-          (bill.type === 'single' ? 'Satu orang' : 'Dibagi rata') +
-          (bill.tenor ? ' (Cicilan)' : ''),
+          (bill.type === 'single'
+            ? en
+              ? 'One person'
+              : 'Satu orang'
+            : en
+              ? 'Split'
+              : 'Dibagi rata') + (bill.tenor ? ' (Cicilan)' : ''),
       });
     }
   }

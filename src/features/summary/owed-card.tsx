@@ -4,17 +4,19 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { formatRp } from '@/domain/money';
+import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import type { MemberSummary } from '@/types/models';
 
 /** "Siapa belum bayar" — never shows "Lunas" for a member with no dues at all. */
 export function OwedCard({ members }: { members: MemberSummary[] }) {
   const c = useTheme();
+  const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <View style={[styles.card, { backgroundColor: c.surface }]}>
-      <ThemedText style={styles.heading}>Siapa belum bayar</ThemedText>
+      <ThemedText style={styles.heading}>{t('owed.title')}</ThemedText>
       {members.map((m) => {
         const owes = m.owed > 0;
         return (
@@ -29,15 +31,15 @@ export function OwedCard({ members }: { members: MemberSummary[] }) {
               <ThemedText>{m.name}</ThemedText>
               {!m.hasDues ? (
                 <ThemedText themeColor="textFaint" style={styles.small}>
-                  Belum ada tagihan
+                  {t('owed.noDues')}
                 </ThemedText>
               ) : !owes ? (
                 <ThemedText style={[styles.small, { color: c.success }]}>
-                  ✓ Lunas
+                  {t('owed.settled')}
                 </ThemedText>
               ) : (
                 <ThemedText style={[styles.small, { color: c.danger }]}>
-                  Belum bayar {formatRp(m.owed)}
+                  {t('owed.unpaidAmount', { amount: formatRp(m.owed) })}
                 </ThemedText>
               )}
             </Pressable>

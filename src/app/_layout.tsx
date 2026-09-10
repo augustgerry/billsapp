@@ -14,6 +14,7 @@ import { KeyboardDoneBar } from '@/components/ui/keyboard-done-bar';
 import { SupabaseGate } from '@/components/supabase-gate';
 import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
+import { LocaleProvider } from '@/features/settings/locale';
 import {
   ThemePreferenceProvider,
   useResolvedScheme,
@@ -67,7 +68,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemePreferenceProvider>
-          <ThemedApp />
+          <LocaleProvider>
+            <ThemedApp />
+          </LocaleProvider>
         </ThemePreferenceProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

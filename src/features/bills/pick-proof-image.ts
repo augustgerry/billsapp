@@ -1,6 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
+import type { TFn } from '@/features/settings/locale';
+
 export interface PickedImage {
   uri: string;
   base64: string;
@@ -22,10 +24,10 @@ async function fromLibrary(): Promise<PickedImage | null> {
   return toResult(res);
 }
 
-async function fromCamera(): Promise<PickedImage | null> {
+async function fromCamera(t: TFn): Promise<PickedImage | null> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) {
-    Alert.alert('Izin kamera ditolak', 'Aktifkan izin kamera di Pengaturan.');
+    Alert.alert(t('proof.cameraDeniedTitle'), t('proof.cameraDeniedBody'));
     return null;
   }
   const res = await ImagePicker.launchCameraAsync({
@@ -37,22 +39,22 @@ async function fromCamera(): Promise<PickedImage | null> {
 }
 
 /** Prompt for a source, then return the picked image (base64) or null. */
-export function pickProofImage(): Promise<PickedImage | null> {
+export function pickProofImage(t: TFn): Promise<PickedImage | null> {
   return new Promise((resolve) => {
-    Alert.alert('Bukti transfer', 'Ambil dari mana?', [
+    Alert.alert(t('proof.pickTitle'), t('proof.pickBody'), [
       {
-        text: 'Kamera',
+        text: t('proof.camera'),
         onPress: () => {
-          void fromCamera().then(resolve);
+          void fromCamera(t).then(resolve);
         },
       },
       {
-        text: 'Galeri',
+        text: t('proof.gallery'),
         onPress: () => {
           void fromLibrary().then(resolve);
         },
       },
-      { text: 'Batal', style: 'cancel', onPress: () => resolve(null) },
+      { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(null) },
     ]);
   });
 }

@@ -5,6 +5,7 @@ import { BILL_CATEGORIES } from '@/types/models';
 import { Spacing } from '@/constants/theme';
 import type { MonthlyCategoryTotals } from '@/domain/billing';
 import { formatShort } from '@/domain/money';
+import { useT } from '@/features/settings/locale';
 import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 
 const BAR_HEIGHT = 120;
@@ -12,12 +13,13 @@ const BAR_HEIGHT = 120;
 /** Stacked monthly bars per category. Plain Views — no chart lib. */
 export function TrendChart({ data }: { data: MonthlyCategoryTotals[] }) {
   const c = useTheme();
+  const t = useT();
   const catColor = useCategoryColors();
 
   if (data.length < 2) {
     return (
       <ThemedText themeColor="textFaint" style={styles.empty}>
-        Grafik muncul setelah ada data dari 2 bulan atau lebih.
+        {t('trend.empty')}
       </ThemedText>
     );
   }

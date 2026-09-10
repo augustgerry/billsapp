@@ -3,6 +3,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
 import { buildExportRows } from '@/domain/billing';
+import type { Locale } from '@/domain/i18n';
 import { formatRp } from '@/domain/money';
 import type { Group } from '@/types/models';
 
@@ -31,14 +32,21 @@ function safeName(name: string): string {
  * Build a CSV of every recorded month and open the share sheet (Excel / Sheets
  * open CSV directly). PDF export from the prototype is not ported yet.
  */
-export async function exportRekapCsv(group: Group): Promise<void> {
-  const rows = buildExportRows(group);
+export async function exportRekapCsv(
+  group: Group,
+  locale: Locale = 'id',
+): Promise<void> {
+  const rows = buildExportRows(group, locale);
   if (rows.length === 0) {
-    throw new Error('Belum ada data buat diekspor.');
+    throw new Error(locale === 'en' ? 'No data to export yet.' : 'Belum ada data buat diekspor.');
   }
 
+  const en = locale === 'en';
   const csv = [
-    ['Bulan', 'Tagihan', 'Kategori', 'Nominal', 'Tipe'].join(','),
+    (en
+      ? ['Month', 'Bill', 'Category', 'Amount', 'Type']
+      : ['Bulan', 'Tagihan', 'Kategori', 'Nominal', 'Tipe']
+    ).join(','),
     ...rows.map((r) =>
       [r.bulan, r.tagihan, r.kategori, r.nominal, r.tipe].map(csvCell).join(','),
     ),
@@ -50,20 +58,24 @@ export async function exportRekapCsv(group: Group): Promise<void> {
   });
 
   if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Fitur bagikan file nggak tersedia di perangkat ini.');
+    throw new Error('Sharing is not available on this device.');
   }
   await Sharing.shareAsync(uri, {
     mimeType: 'text/csv',
-    dialogTitle: `Rekap tagihan ${group.name}`,
+    dialogTitle: `${group.name} — ${en ? 'bills' : 'rekap tagihan'}`,
     UTI: 'public.comma-separated-values-text',
   });
 }
 
 /** Render the same rows to a one-page PDF and open the share sheet. */
-export async function exportRekapPdf(group: Group): Promise<void> {
-  const rows = buildExportRows(group);
+export async function exportRekapPdf(
+  group: Group,
+  locale: Locale = 'id',
+): Promise<void> {
+  const en = locale === 'en';
+  const rows = buildExportRows(group, locale);
   if (rows.length === 0) {
-    throw new Error('Belum ada data buat diekspor.');
+    throw new Error(en ? 'No data to export yet.' : 'Belum ada data buat diekspor.');
   }
 
   const total = rows.reduce((sum, r) => sum + r.nominal, 0);
@@ -90,10 +102,15 @@ export async function exportRekapPdf(group: Group): Promise<void> {
       .r { text-align: right; }
       tfoot td { font-weight: 700; border-top: 2px solid #999; }
     </style></head><body>
-    <h1>Rekap Tagihan — ${htmlEscape(group.name)}</h1>
-    <p>Dibuat ${new Date().toLocaleDateString('id-ID')}</p>
+    <h1>${en ? 'Bill summary' : 'Rekap Tagihan'} — ${htmlEscape(group.name)}</h1>
+    <p>${en ? 'Generated' : 'Dibuat'} ${new Date().toLocaleDateString(en ? 'en-US' : 'id-ID')}</p>
     <table>
-      <thead><tr><th>Bulan</th><th>Tagihan</th><th>Kategori</th><th class="r">Nominal</th><th>Tipe</th></tr></thead>
+      <thead><tr>${(en
+        ? ['Month', 'Bill', 'Category', 'Amount', 'Type']
+        : ['Bulan', 'Tagihan', 'Kategori', 'Nominal', 'Tipe']
+      )
+        .map((h, i) => `<th${i === 3 ? ' class="r"' : ''}>${h}</th>`)
+        .join('')}</tr></thead>
       <tbody>${body}</tbody>
       <tfoot><tr><td colspan="3">Total</td><td class="r">${htmlEscape(formatRp(total))}</td><td></td></tr></tfoot>
     </table>
@@ -101,11 +118,11 @@ export async function exportRekapPdf(group: Group): Promise<void> {
 
   const { uri } = await Print.printToFileAsync({ html });
   if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('Fitur bagikan file nggak tersedia di perangkat ini.');
+    throw new Error('Sharing is not available on this device.');
   }
   await Sharing.shareAsync(uri, {
     mimeType: 'application/pdf',
-    dialogTitle: `Rekap tagihan ${group.name}`,
+    dialogTitle: `${group.name} — ${en ? 'bills' : 'rekap tagihan'}`,
     UTI: 'com.adobe.pdf',
   });
 }

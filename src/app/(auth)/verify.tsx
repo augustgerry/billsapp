@@ -8,10 +8,12 @@ import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
+import { useT } from '@/features/settings/locale';
 
 export default function VerifyScreen() {
   const { email = '' } = useLocalSearchParams<{ email?: string }>();
   const { verifyEmail, resendCode } = useAuth();
+  const t = useT();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -23,9 +25,8 @@ export default function VerifyScreen() {
     setError(null);
     try {
       await verifyEmail({ email, token: code });
-      // success -> (auth)/_layout redirects to /(app)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kode salah, coba lagi.');
+      setError(e instanceof Error ? e.message : t('verify.wrongCode'));
       setBusy(false);
     }
   }
@@ -35,24 +36,24 @@ export default function VerifyScreen() {
     setNote(null);
     try {
       await resendCode(email);
-      setNote('Kode baru sudah dikirim.');
+      setNote(t('verify.resent'));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mengirim ulang.');
+      setError(e instanceof Error ? e.message : t('verify.resendFailed'));
     }
   }
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Verifikasi email</ThemedText>
+      <ThemedText type="subtitle">{t('verify.title')}</ThemedText>
       <ThemedText themeColor="textSecondary">
-        Masukkan kode 6 digit yang dikirim ke {email || 'email kamu'}.
+        {t('verify.subtitle', { email: email || t('verify.emailFallback') })}
       </ThemedText>
 
       <View style={styles.form}>
         <TextField
-          label="Kode OTP"
+          label={t('verify.codeLabel')}
           value={code}
-          onChangeText={(t) => setCode(t.replace(/[^0-9]/g, '').slice(0, 6))}
+          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
           keyboardType="number-pad"
           placeholder="123456"
           maxLength={6}
@@ -62,13 +63,17 @@ export default function VerifyScreen() {
           hint={note ?? undefined}
         />
         <Button
-          label="Verifikasi"
+          label={t('verify.submit')}
           onPress={submit}
           disabled={code.length !== 6}
           loading={busy}
         />
-        <Button label="Kirim ulang kode" variant="ghost" onPress={resend} />
-        <Button label="Ganti email" variant="ghost" onPress={() => router.back()} />
+        <Button label={t('verify.resend')} variant="ghost" onPress={resend} />
+        <Button
+          label={t('verify.changeEmail')}
+          variant="ghost"
+          onPress={() => router.back()}
+        />
       </View>
     </Screen>
   );

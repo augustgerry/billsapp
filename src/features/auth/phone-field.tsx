@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import {
   COUNTRIES,
@@ -30,7 +31,7 @@ interface PhoneFieldProps {
 }
 
 export function PhoneField({
-  label = 'Nomor HP',
+  label,
   country,
   onChangeCountry,
   number,
@@ -38,6 +39,7 @@ export function PhoneField({
   error,
 }: PhoneFieldProps) {
   const c = useTheme();
+  const t = useT();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -54,7 +56,9 @@ export function PhoneField({
 
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.label, { color: c.textSecondary }]}>{label}</Text>
+      <Text style={[styles.label, { color: c.textSecondary }]}>
+        {label ?? t('register.phoneLabel')}
+      </Text>
       <View style={styles.row}>
         <Pressable
           onPress={() => setPickerOpen(true)}
@@ -84,17 +88,17 @@ export function PhoneField({
       >
         <SafeAreaView style={[styles.modal, { backgroundColor: c.background }]}>
           <View style={styles.modalHead}>
-            <ThemedText type="subtitle">Pilih negara</ThemedText>
+            <ThemedText type="subtitle">{t('phone.pickCountry')}</ThemedText>
             <Pressable onPress={() => setPickerOpen(false)} hitSlop={10}>
               <ThemedText themeColor="primaryText" style={styles.close}>
-                Tutup
+                {t('common.close')}
               </ThemedText>
             </Pressable>
           </View>
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Cari negara / kode"
+            placeholder={t('phone.searchCountry')}
             placeholderTextColor={c.textFaint}
             autoFocus
             style={[

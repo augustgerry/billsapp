@@ -1,10 +1,10 @@
 /**
  * Date helpers. Ported from `kongsi-pilot.html`.
  *
- * Every function takes an optional `now` so tests are deterministic; callers in
- * the app pass nothing and get "real now".
+ * Every function takes an optional `now` (deterministic tests) and `locale`.
  */
 
+import type { Locale } from './i18n';
 import type { MonthKey } from '../types/models';
 
 export const MONTH_NAMES_FULL = [
@@ -22,6 +22,21 @@ export const MONTH_NAMES_FULL = [
   'Desember',
 ] as const;
 
+export const MONTH_NAMES_FULL_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
 export const MONTH_NAMES_SHORT = [
   'Jan',
   'Feb',
@@ -37,49 +52,77 @@ export const MONTH_NAMES_SHORT = [
   'Des',
 ] as const;
 
+export const MONTH_NAMES_SHORT_EN = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+function fullMonth(index: number, locale: Locale): string {
+  return (locale === 'en' ? MONTH_NAMES_FULL_EN : MONTH_NAMES_FULL)[index];
+}
+function shortMonth(index: number, locale: Locale): string {
+  return (locale === 'en' ? MONTH_NAMES_SHORT_EN : MONTH_NAMES_SHORT)[index];
+}
+
 /** Current month bucket key, `YYYY-MM`. */
 export function monthKey(now: Date = new Date()): MonthKey {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** "September 2026" */
-export function monthLabel(now: Date = new Date()): string {
-  return `${MONTH_NAMES_FULL[now.getMonth()]} ${now.getFullYear()}`;
+export function monthLabel(now: Date = new Date(), locale: Locale = 'id'): string {
+  return `${fullMonth(now.getMonth(), locale)} ${now.getFullYear()}`;
 }
 
-/** "2026-09" -> "Sep 26" (for compact chart / export labels). */
-export function monthKeyLabel(key: MonthKey): string {
+/** "2026-09" -> "Sep 26" */
+export function monthKeyLabel(key: MonthKey, locale: Locale = 'id'): string {
   const [year, month] = key.split('-');
-  return `${MONTH_NAMES_SHORT[parseInt(month, 10) - 1]} ${year.slice(2)}`;
+  return `${shortMonth(parseInt(month, 10) - 1, locale)} ${year.slice(2)}`;
 }
 
 export interface DueStatus {
-  /** "H-3" | "Jatuh tempo hari ini" | "Telat 2 hari" */
   text: string;
   overdue: boolean;
 }
 
-/**
- * Countdown text for a bill's due day *this* calendar month. Matches the
- * prototype's `daysStatus`: same-day rounds to "jatuh tempo hari ini", any past
- * day is "telat", future is "H-n".
- */
-export function daysStatus(dueDay: number, now: Date = new Date()): DueStatus {
+/** Countdown text for a bill's due day *this* calendar month. */
+export function daysStatus(
+  dueDay: number,
+  now: Date = new Date(),
+  locale: Locale = 'id',
+): DueStatus {
   const due = new Date(now.getFullYear(), now.getMonth(), dueDay);
   const diffDays = Math.ceil((due.getTime() - now.getTime()) / 86_400_000);
   if (diffDays < 0) {
-    return { text: `Telat ${Math.abs(diffDays)} hari`, overdue: true };
+    const n = Math.abs(diffDays);
+    return {
+      text: locale === 'en' ? `${n} day${n > 1 ? 's' : ''} late` : `Telat ${n} hari`,
+      overdue: true,
+    };
   }
   if (diffDays === 0) {
-    return { text: 'Jatuh tempo hari ini', overdue: false };
+    return {
+      text: locale === 'en' ? 'Due today' : 'Jatuh tempo hari ini',
+      overdue: false,
+    };
   }
   return { text: `H-${diffDays}`, overdue: false };
 }
 
-/** "9 Sep 2026, 14:05" — for proof upload timestamps. */
-export function formatDateTime(ts: number): string {
+/** "9 Sep 2026, 14:05" */
+export function formatDateTime(ts: number, locale: Locale = 'id'): string {
   const d = new Date(ts);
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+  return `${d.getDate()} ${shortMonth(d.getMonth(), locale)} ${d.getFullYear()}, ${hh}:${mm}`;
 }

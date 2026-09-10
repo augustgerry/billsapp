@@ -8,9 +8,11 @@ import { TextLink } from '@/components/ui/text-link';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
+import { useT } from '@/features/settings/locale';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,48 +27,52 @@ export default function LoginScreen() {
     setError(null);
     try {
       await signIn({ email, password });
-      // success -> (auth)/_layout redirects to /(app); keep the spinner
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal masuk');
+      setError(e instanceof Error ? e.message : t('login.failed'));
       setBusy(false);
     }
   }
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Masuk</ThemedText>
-      <ThemedText themeColor="textSecondary">Masuk ke akun Kongsi kamu.</ThemedText>
+      <ThemedText type="subtitle">{t('login.title')}</ThemedText>
+      <ThemedText themeColor="textSecondary">{t('login.subtitle')}</ThemedText>
 
       <View style={styles.form}>
         <TextField
-          label="Email"
+          label={t('common.email')}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           autoComplete="email"
-          placeholder="nama@email.com"
+          placeholder={t('common.emailPlaceholder')}
           returnKeyType="next"
           onSubmitEditing={() => pwRef.current?.focus()}
         />
         <TextField
           ref={pwRef}
-          label="Password"
+          label={t('common.password')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="Password"
+          placeholder={t('common.password')}
           returnKeyType="go"
           onSubmitEditing={submit}
           error={error ?? undefined}
         />
-        <Button label="Masuk" onPress={submit} disabled={!valid} loading={busy} />
+        <Button
+          label={t('login.submit')}
+          onPress={submit}
+          disabled={!valid}
+          loading={busy}
+        />
       </View>
 
       <Text style={styles.foot}>
-        <ThemedText themeColor="textSecondary">Belum punya akun? </ThemedText>
-        <TextLink href="/(auth)/register">Daftar</TextLink>
+        <ThemedText themeColor="textSecondary">{t('login.noAccount')}</ThemedText>
+        <TextLink href="/(auth)/register">{t('login.register')}</TextLink>
       </Text>
     </Screen>
   );

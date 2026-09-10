@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 
 /** nativeID that `TextField` points numeric keyboards at. */
@@ -20,6 +21,7 @@ export const KEYBOARD_DONE_ID = 'kongsi-kb-done';
  */
 export function KeyboardDoneBar() {
   const c = useTheme();
+  const t = useT();
   if (Platform.OS !== 'ios') return null;
 
   return (
@@ -31,7 +33,9 @@ export function KeyboardDoneBar() {
         ]}
       >
         <Pressable onPress={() => Keyboard.dismiss()} hitSlop={10}>
-          <Text style={[styles.done, { color: c.primaryText }]}>Selesai</Text>
+          <Text style={[styles.done, { color: c.primaryText }]}>
+            {t('common.done')}
+          </Text>
         </Pressable>
       </View>
     </InputAccessoryView>

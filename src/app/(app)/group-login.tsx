@@ -8,6 +8,7 @@ import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/features/auth/auth-context';
 import { markGroupUnlocked } from '@/features/groups/unlocked-groups';
+import { useT } from '@/features/settings/locale';
 import type { Group } from '@/types/models';
 import { fetchGroup } from '@/lib/groups-repository';
 import { touchRecentGroup } from '@/lib/recent-groups-repository';
@@ -18,6 +19,7 @@ export default function GroupLoginScreen() {
     name?: string;
   }>();
   const { email } = useAuth();
+  const t = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pin, setPin] = useState('');
@@ -27,11 +29,7 @@ export default function GroupLoginScreen() {
     let active = true;
     fetchGroup(groupId)
       .then((g) => active && setGroup(g))
-      .catch(
-        (e: unknown) =>
-          active &&
-          setLoadError(e instanceof Error ? e.message : 'Gagal memuat grup'),
-      );
+      .catch((e: unknown) => active && setLoadError(String(e)));
     return () => {
       active = false;
     };
@@ -40,11 +38,8 @@ export default function GroupLoginScreen() {
   if (loadError) {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
-        <ThemedText type="subtitle">{name ?? 'Grup'}</ThemedText>
-        <ThemedText themeColor="danger">
-          Nggak bisa buka grup ini. Kalau kamu baru diundang, terima dulu
-          undangannya di Home.
-        </ThemedText>
+        <ThemedText type="subtitle">{name ?? t('nav.group')}</ThemedText>
+        <ThemedText themeColor="danger">{t('groupLogin.loadError')}</ThemedText>
       </Screen>
     );
   }
@@ -61,8 +56,8 @@ export default function GroupLoginScreen() {
         <ThemedText type="subtitle">{group.name}</ThemedText>
         <ThemedText themeColor="danger">
           {member?.status === 'pending'
-            ? 'Kamu diundang ke grup ini tapi belum menerima undangannya. Buka Home lalu terima undangannya.'
-            : `Email kamu (${email}) belum terdaftar sebagai anggota grup ini. Minta admin buat menambahkan email kamu.`}
+            ? t('groupLogin.pendingInvite')
+            : t('groupLogin.notMember', { email: email ?? '-' })}
         </ThemedText>
       </Screen>
     );
@@ -76,9 +71,12 @@ export default function GroupLoginScreen() {
       if (digits === group!.pin) {
         markGroupUnlocked(groupId);
         void touchRecentGroup(groupId);
-        router.replace({ pathname: '/(app)/group/[id]', params: { id: groupId } });
+        router.replace({
+          pathname: '/(app)/group/[id]',
+          params: { id: groupId },
+        });
       } else {
-        setPinError('PIN salah, coba lagi.');
+        setPinError(t('groupLogin.pinWrong'));
         setPin('');
       }
     }
@@ -86,12 +84,14 @@ export default function GroupLoginScreen() {
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
-      <ThemedText type="subtitle">Masuk ke {group.name}</ThemedText>
+      <ThemedText type="subtitle">
+        {t('groupLogin.title', { name: group.name })}
+      </ThemedText>
       <ThemedText themeColor="textSecondary">
-        Masuk sebagai {member.name}. Masukkan PIN grup.
+        {t('groupLogin.as', { name: member.name })}
       </ThemedText>
       <TextField
-        label="PIN grup"
+        label={t('groupLogin.pinLabel')}
         value={pin}
         onChangeText={onPinChange}
         keyboardType="number-pad"

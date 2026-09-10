@@ -8,6 +8,7 @@ import { Screen } from '@/components/ui/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
+import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import { countGroupAttention } from '@/lib/attention-repository';
 import {
@@ -26,6 +27,7 @@ import {
 export default function HomeScreen() {
   const { email } = useAuth();
   const c = useTheme();
+  const t = useT();
   const [recents, setRecents] = useState<RecentGroupItem[] | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [attention, setAttention] = useState<Record<string, number>>({});
@@ -49,9 +51,9 @@ export default function HomeScreen() {
           .catch(() => setAttention({}));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal memuat daftar grup');
+      setError(e instanceof Error ? e.message : t('home.loadFailed'));
     }
-  }, [email]);
+  }, [email, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,7 +76,10 @@ export default function HomeScreen() {
       if (accept) await touchRecentGroup(item.groupId);
       load();
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Coba lagi');
+      Alert.alert(
+        t('common.failed'),
+        e instanceof Error ? e.message : t('common.retry'),
+      );
     } finally {
       setBusyInvite(null);
     }
@@ -83,30 +88,36 @@ export default function HomeScreen() {
   function rowActions(item: RecentGroupItem) {
     Alert.alert(item.name, undefined, [
       {
-        text: 'Duplikat',
+        text: t('home.duplicate'),
         onPress: async () => {
           try {
             const { groupId } = await duplicateGroup(item.groupId);
             await touchRecentGroup(groupId);
             load();
           } catch (e) {
-            Alert.alert('Gagal', e instanceof Error ? e.message : 'Coba lagi');
+            Alert.alert(
+              t('common.failed'),
+              e instanceof Error ? e.message : t('common.retry'),
+            );
           }
         },
       },
       {
-        text: 'Hapus dari daftar',
+        text: t('home.removeFromList'),
         style: 'destructive',
         onPress: async () => {
           try {
             await hideRecentGroup(item.groupId);
             load();
           } catch (e) {
-            Alert.alert('Gagal', e instanceof Error ? e.message : 'Coba lagi');
+            Alert.alert(
+              t('common.failed'),
+              e instanceof Error ? e.message : t('common.retry'),
+            );
           }
         },
       },
-      { text: 'Batal', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   }
 
@@ -119,7 +130,7 @@ export default function HomeScreen() {
         <Pressable
           onPress={() => router.push('/(app)/settings')}
           accessibilityRole="button"
-          accessibilityLabel="Pengaturan"
+          accessibilityLabel={t('nav.settings')}
           hitSlop={10}
         >
           <Ionicons name="settings-outline" size={22} color={c.textSecondary} />
@@ -127,16 +138,14 @@ export default function HomeScreen() {
       </View>
 
       <ThemedText type="subtitle">Kongsi</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        Kelola tagihan rumah tangga bareng — siapa bayar apa, siapa belum setor.
-      </ThemedText>
+      <ThemedText themeColor="textSecondary">{t('home.tagline')}</ThemedText>
 
       {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
 
       {invites.length > 0 ? (
         <View style={styles.section}>
           <ThemedText themeColor="textFaint" style={styles.sectionLabel}>
-            UNDANGAN
+            {t('home.invites')}
           </ThemedText>
           {invites.map((item) => (
             <View
@@ -151,7 +160,7 @@ export default function HomeScreen() {
                   hitSlop={6}
                 >
                   <ThemedText style={[styles.act, { color: c.success }]}>
-                    Terima
+                    {t('home.accept')}
                   </ThemedText>
                 </Pressable>
                 <Pressable
@@ -160,7 +169,7 @@ export default function HomeScreen() {
                   hitSlop={6}
                 >
                   <ThemedText style={[styles.act, { color: c.danger }]}>
-                    Tolak
+                    {t('home.decline')}
                   </ThemedText>
                 </Pressable>
               </View>
@@ -172,7 +181,7 @@ export default function HomeScreen() {
       {recents && recents.length > 0 ? (
         <View style={styles.section}>
           <ThemedText themeColor="textFaint" style={styles.sectionLabel}>
-            LANJUTKAN
+            {t('home.continue')}
           </ThemedText>
           {recents.map((item) => {
             const badge = attention[item.groupId] ?? 0;
@@ -201,21 +210,21 @@ export default function HomeScreen() {
             );
           })}
           <ThemedText themeColor="textFaint" style={styles.hint}>
-            Tekan lama untuk duplikat / hapus dari daftar.
+            {t('home.longPressHint')}
           </ThemedText>
         </View>
       ) : null}
 
       <View style={styles.section}>
         <ThemedText themeColor="textFaint" style={styles.sectionLabel}>
-          MULAI BARU
+          {t('home.startNew')}
         </ThemedText>
         <Button
-          label="Buat grup rumah tangga baru"
+          label={t('home.createGroup')}
           onPress={() => router.push('/(app)/create-group')}
         />
         <Button
-          label="Buka grup dengan kode"
+          label={t('home.joinGroup')}
           variant="secondary"
           onPress={() => router.push('/(app)/join-group')}
         />

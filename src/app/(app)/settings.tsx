@@ -6,45 +6,63 @@ import { Segmented } from '@/components/ui/segmented';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-context';
+import { useLocale } from '@/features/settings/locale';
 import { useThemePreference } from '@/features/settings/theme-preference';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function SettingsScreen() {
   const { email, wa, signOut } = useAuth();
   const { pref, setPref } = useThemePreference();
+  const { lang, setLang, t } = useLocale();
   const c = useTheme();
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
       <ThemedText themeColor="textFaint" style={styles.label}>
-        AKUN
+        {t('settings.account')}
       </ThemedText>
       <View style={[styles.card, { backgroundColor: c.surface }]}>
         <View style={[styles.row, { borderTopColor: c.border }]}>
-          <ThemedText themeColor="textSecondary">Email</ThemedText>
+          <ThemedText themeColor="textSecondary">{t('common.email')}</ThemedText>
           <ThemedText>{email ?? '-'}</ThemedText>
         </View>
         <View style={[styles.row, { borderTopColor: c.border }]}>
-          <ThemedText themeColor="textSecondary">Nomor HP</ThemedText>
+          <ThemedText themeColor="textSecondary">{t('settings.phone')}</ThemedText>
           <ThemedText>{wa ?? '-'}</ThemedText>
         </View>
       </View>
 
       <ThemedText themeColor="textFaint" style={styles.label}>
-        TAMPILAN
+        {t('settings.appearance')}
       </ThemedText>
       <Segmented
         options={[
-          { label: 'Terang', value: 'light' },
-          { label: 'Gelap', value: 'dark' },
-          { label: 'Ikuti Sistem', value: 'system' },
+          { label: t('settings.themeLight'), value: 'light' },
+          { label: t('settings.themeDark'), value: 'dark' },
+          { label: t('settings.themeSystem'), value: 'system' },
         ]}
         value={pref}
         onChange={setPref}
       />
 
+      <ThemedText themeColor="textFaint" style={styles.label}>
+        {t('settings.language')}
+      </ThemedText>
+      <Segmented
+        options={[
+          { label: t('settings.langId'), value: 'id' },
+          { label: t('settings.langEn'), value: 'en' },
+        ]}
+        value={lang}
+        onChange={setLang}
+      />
+
       <View style={styles.spacer} />
-      <Button label="Keluar" variant="danger" onPress={() => void signOut()} />
+      <Button
+        label={t('settings.signOut')}
+        variant="danger"
+        onPress={() => void signOut()}
+      />
     </Screen>
   );
 }

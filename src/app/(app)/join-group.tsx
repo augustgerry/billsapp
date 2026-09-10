@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/features/auth/auth-context';
+import { useT } from '@/features/settings/locale';
 import {
   lookupGroupForJoin,
   respondToInvite,
@@ -16,6 +17,7 @@ import { touchRecentGroup } from '@/lib/recent-groups-repository';
 
 export default function JoinGroupScreen() {
   const { email } = useAuth();
+  const t = useT();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notMember, setNotMember] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function JoinGroupScreen() {
         goToGroup(found);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kode tidak ditemukan');
+      setError(e instanceof Error ? e.message : t('join.notFound'));
     } finally {
       setBusy(false);
     }
@@ -60,7 +62,7 @@ export default function JoinGroupScreen() {
       await touchRecentGroup(invite.groupId);
       goToGroup(invite);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menerima undangan');
+      setError(e instanceof Error ? e.message : t('join.acceptFailed'));
     } finally {
       setBusy(false);
     }
@@ -68,16 +70,14 @@ export default function JoinGroupScreen() {
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
-      <ThemedText themeColor="textSecondary">
-        Masukkan kode grup yang dibagikan admin.
-      </ThemedText>
+      <ThemedText themeColor="textSecondary">{t('join.subtitle')}</ThemedText>
       <TextField
-        label="Kode grup"
+        label={t('join.codeLabel')}
         value={code}
-        onChangeText={(t) => setCode(t.toUpperCase())}
+        onChangeText={(v) => setCode(v.toUpperCase())}
         autoCapitalize="characters"
         autoCorrect={false}
-        placeholder="Contoh: 7XQP2"
+        placeholder={t('join.codePlaceholder')}
         maxLength={8}
         returnKeyType="go"
         onSubmitEditing={submit}
@@ -87,23 +87,27 @@ export default function JoinGroupScreen() {
 
       {notMember ? (
         <ThemedText themeColor="danger">
-          Email kamu ({email}) belum terdaftar sebagai anggota grup {notMember}.
-          Minta admin buat menambahkan email kamu.
+          {t('join.notMember', { email: email ?? '-', name: notMember })}
         </ThemedText>
       ) : null}
 
       {invite ? (
         <>
           <ThemedText themeColor="textSecondary">
-            Kamu diundang ke grup <ThemedText>{invite.name}</ThemedText> sebagai{' '}
-            <ThemedText>{invite.memberName}</ThemedText>. Terima undangannya buat
-            gabung.
+            {t('join.invited', {
+              name: invite.name,
+              member: invite.memberName ?? '',
+            })}
           </ThemedText>
-          <Button label="Terima & lanjut" onPress={acceptInvite} loading={busy} />
+          <Button
+            label={t('join.acceptContinue')}
+            onPress={acceptInvite}
+            loading={busy}
+          />
         </>
       ) : (
         <Button
-          label="Buka grup"
+          label={t('join.open')}
           onPress={submit}
           disabled={code.trim().length === 0}
           loading={busy}

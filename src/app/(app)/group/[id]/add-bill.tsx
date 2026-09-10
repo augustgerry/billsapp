@@ -9,10 +9,11 @@ import { Segmented } from '@/components/ui/segmented';
 import { TextField } from '@/components/ui/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { CategoryIcons, Spacing } from '@/constants/theme';
-import { MONTH_NAMES_FULL } from '@/domain/dates';
+import { MONTH_NAMES_FULL, MONTH_NAMES_FULL_EN } from '@/domain/dates';
 import { perInstallmentFromTotal } from '@/domain/billing';
 import { toTitleCase } from '@/domain/text';
 import { formatRp, parseRupiah } from '@/domain/money';
+import { useLocale } from '@/features/settings/locale';
 import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 import { insertBill } from '@/lib/bills-repository';
 import { fetchGroup } from '@/lib/groups-repository';
@@ -59,7 +60,9 @@ function Chip({
 export default function AddBillScreen() {
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const c = useTheme();
+  const { t, lang } = useLocale();
   const catColor = useCategoryColors();
+  const monthNames = lang === 'en' ? MONTH_NAMES_FULL_EN : MONTH_NAMES_FULL;
   const now = useMemo(() => new Date(), []);
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -89,7 +92,7 @@ export default function AddBillScreen() {
       .catch(
         (e: unknown) =>
           active &&
-          setLoadError(e instanceof Error ? e.message : 'Gagal memuat grup'),
+          setLoadError(String(e)),
       );
     return () => {
       active = false;
@@ -99,7 +102,7 @@ export default function AddBillScreen() {
   if (loadError) {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
-        <ThemedText themeColor="danger">{loadError}</ThemedText>
+        <ThemedText themeColor="danger">{t('groupLogin.loadFailed')}</ThemedText>
       </Screen>
     );
   }
@@ -179,26 +182,24 @@ export default function AddBillScreen() {
       await insertBill(id, bill);
       router.replace({ pathname: '/(app)/group/[id]', params: { id } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal menyimpan tagihan');
+      setError(e instanceof Error ? e.message : t('bill.saveFailed'));
       setBusy(false);
     }
   }
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
-      <ThemedText themeColor="textSecondary">
-        Tagihan ini muncul otomatis tiap bulan.
-      </ThemedText>
+      <ThemedText themeColor="textSecondary">{t('bill.recurringNote')}</ThemedText>
 
       <TextField
-        label="Nama tagihan"
+        label={t('bill.nameLabel')}
         value={name}
-        onChangeText={(t) => setName(toTitleCase(t))}
-        placeholder="Contoh: Listrik, Internet, Cicilan Motor"
+        onChangeText={(v) => setName(toTitleCase(v))}
+        placeholder={t('bill.namePlaceholder')}
       />
 
       <ThemedText themeColor="textSecondary" style={styles.label}>
-        Kategori
+        {t('bill.categoryLabel')}
       </ThemedText>
       <View style={styles.chipRow}>
         {BILL_CATEGORIES.map((cat) => (
@@ -216,18 +217,18 @@ export default function AddBillScreen() {
       {isCicilan ? (
         <>
           <ThemedText themeColor="textSecondary" style={styles.label}>
-            Cicilan ini untuk
+            {t('bill.installmentFor')}
           </ThemedText>
           <View style={styles.chipRow}>
             <Chip
-              label="Diri sendiri"
+              label={t('bill.forSelf')}
               active={lender === ''}
               onPress={() => setLender('')}
             />
             {members.map((m) => (
               <Chip
                 key={m}
-                label={`Pinjaman dari ${m}`}
+                label={t('bill.loanFrom', { name: m })}
                 active={lender === m}
                 onPress={() => setLender(m)}
               />
@@ -236,20 +237,20 @@ export default function AddBillScreen() {
           <View style={styles.row}>
             <TextField
               containerStyle={styles.flex1}
-              label="Tenor (berapa kali)"
+              label={t('bill.tenorLabel')}
               value={tenor}
-              onChangeText={(t) => setTenor(t.replace(/[^0-9]/g, ''))}
+              onChangeText={(v) => setTenor(v.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               placeholder="12"
             />
             <TextField
               containerStyle={styles.flex1}
-              label="Sudah dibayar"
+              label={t('bill.paidCountLabel')}
               value={paidCount}
-              onChangeText={(t) => setPaidCount(t.replace(/[^0-9]/g, ''))}
+              onChangeText={(v) => setPaidCount(v.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               placeholder="0"
-              hint="0 kalau baru mulai"
+              hint={t('bill.paidCountHint')}
             />
           </View>
           <Pressable
@@ -272,50 +273,48 @@ export default function AddBillScreen() {
               ) : null}
             </View>
             <ThemedText themeColor="textSecondary">
-              Hitung dari total keseluruhan ÷ tenor
+              {t('bill.totalModeToggle')}
             </ThemedText>
           </Pressable>
         </>
       ) : null}
 
       <ThemedText themeColor="textSecondary" style={styles.label}>
-        Jatuh tempo
+        {t('bill.dueLabel')}
       </ThemedText>
       <View style={styles.row}>
         <TextField
           containerStyle={styles.flex1}
-          label="Tgl"
+          label={t('bill.day')}
           value={dueDay}
-          onChangeText={(t) => setDueDay(t.replace(/[^0-9]/g, '').slice(0, 2))}
+          onChangeText={(v) => setDueDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
           keyboardType="number-pad"
           placeholder="1-31"
         />
         <TextField
           containerStyle={styles.flex1}
-          label="Bulan"
+          label={t('bill.month')}
           value={dueMonth}
-          onChangeText={(t) => setDueMonth(t.replace(/[^0-9]/g, '').slice(0, 2))}
+          onChangeText={(v) => setDueMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
           keyboardType="number-pad"
-          hint={
-            monthN >= 1 && monthN <= 12 ? MONTH_NAMES_FULL[monthN - 1] : '1-12'
-          }
+          hint={monthN >= 1 && monthN <= 12 ? monthNames[monthN - 1] : '1-12'}
         />
         <TextField
           containerStyle={styles.flex1}
-          label="Thn"
+          label={t('bill.year')}
           value={dueYear}
-          onChangeText={(t) => setDueYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+          onChangeText={(v) => setDueYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
           keyboardType="number-pad"
         />
       </View>
 
       <ThemedText themeColor="textSecondary" style={styles.label}>
-        Tipe tanggung jawab
+        {t('bill.typeLabel')}
       </ThemedText>
       <Segmented
         options={[
-          { label: 'Satu orang', value: 'single' },
-          { label: 'Dibagi rata', value: 'split' },
+          { label: t('bill.typeSingle'), value: 'single' },
+          { label: t('bill.typeSplit'), value: 'split' },
         ]}
         value={billType}
         onChange={(v) => setBillType(v)}
@@ -324,7 +323,7 @@ export default function AddBillScreen() {
       {billType === 'single' ? (
         <>
           <ThemedText themeColor="textSecondary" style={styles.label}>
-            Penanggung jawab
+            {t('bill.responsibleLabel')}
           </ThemedText>
           <View style={styles.chipRow}>
             {members.map((m) => (
@@ -340,7 +339,7 @@ export default function AddBillScreen() {
       ) : (
         <>
           <ThemedText themeColor="textSecondary" style={styles.label}>
-            Siapa saja yang ikut menanggung (min. 2)
+            {t('bill.splitLabel')}
           </ThemedText>
           <View style={styles.chipRow}>
             {members.map((m) => (
@@ -355,7 +354,7 @@ export default function AddBillScreen() {
           {splitMembers.length >= 2 ? (
             <>
               <ThemedText themeColor="textSecondary" style={styles.label}>
-                Transfer ke siapa (yang menalangi duluan)
+                {t('bill.payerLabel')}
               </ThemedText>
               <View style={styles.chipRow}>
                 {splitMembers.map((m) => (
@@ -376,24 +375,27 @@ export default function AddBillScreen() {
         label={
           isCicilan
             ? totalMode
-              ? 'Total tagihan keseluruhan'
-              : 'Nominal per cicilan'
-            : 'Perkiraan nominal'
+              ? t('bill.amountTotal')
+              : t('bill.amountPerInstallment')
+            : t('bill.amountEstimate')
         }
         value={amount ? formatRp(amount) : ''}
-        onChangeText={(t) => setAmount(parseRupiah(t))}
+        onChangeText={(v) => setAmount(parseRupiah(v))}
         keyboardType="number-pad"
         placeholder="Rp.300.000"
         hint={
           perMonthPreview != null
-            ? `≈ ${formatRp(perMonthPreview)} per bulan × ${tenorN}`
+            ? t('bill.perMonthPreview', {
+                amount: formatRp(perMonthPreview),
+                n: tenorN,
+              })
             : undefined
         }
       />
 
       {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
       <Button
-        label="Simpan tagihan"
+        label={t('bill.submit')}
         onPress={submit}
         disabled={!valid}
         loading={busy}

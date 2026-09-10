@@ -16,11 +16,13 @@ import {
   type Country,
 } from '@/features/auth/country-codes';
 import { PhoneField } from '@/features/auth/phone-field';
+import { useT } from '@/features/settings/locale';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
@@ -51,65 +53,68 @@ export default function RegisterScreen() {
         });
         setBusy(false);
       }
-      // otherwise the session exists and (auth)/_layout redirects
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal mendaftar');
+      setError(e instanceof Error ? e.message : t('register.failed'));
       setBusy(false);
     }
   }
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Daftar</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        Buat akun buat mulai pakai Kongsi.
-      </ThemedText>
+      <ThemedText type="subtitle">{t('register.title')}</ThemedText>
+      <ThemedText themeColor="textSecondary">{t('register.subtitle')}</ThemedText>
 
       <View style={styles.form}>
         <TextField
-          label="Email"
+          label={t('common.email')}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           autoComplete="email"
-          placeholder="nama@email.com"
+          placeholder={t('common.emailPlaceholder')}
           returnKeyType="next"
           onSubmitEditing={() => pwRef.current?.focus()}
           error={
-            email.length > 0 && !emailOk ? 'Masukkan email yang valid.' : undefined
+            email.length > 0 && !emailOk ? t('register.emailInvalid') : undefined
           }
         />
         <TextField
           ref={pwRef}
-          label="Password"
+          label={t('common.password')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="Minimal 6 karakter"
+          placeholder={t('register.passwordHint')}
           error={
-            password.length > 0 && !passOk
-              ? 'Password minimal 6 karakter.'
-              : undefined
+            password.length > 0 && !passOk ? t('register.passwordShort') : undefined
           }
         />
         <PhoneField
+          label={t('register.phoneLabel')}
           country={country}
           onChangeCountry={setCountry}
           number={phone}
           onChangeNumber={setPhone}
           error={
-            phone.length > 0 && !phoneOk ? 'Nomor HP nggak valid.' : undefined
+            phone.length > 0 && !phoneOk ? t('register.phoneInvalid') : undefined
           }
         />
         {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-        <Button label="Daftar" onPress={submit} disabled={!valid} loading={busy} />
+        <Button
+          label={t('register.submit')}
+          onPress={submit}
+          disabled={!valid}
+          loading={busy}
+        />
       </View>
 
       <Text style={styles.foot}>
-        <ThemedText themeColor="textSecondary">Sudah punya akun? </ThemedText>
-        <TextLink href="/(auth)/login">Masuk</TextLink>
+        <ThemedText themeColor="textSecondary">
+          {t('register.haveAccount')}
+        </ThemedText>
+        <TextLink href="/(auth)/login">{t('register.login')}</TextLink>
       </Text>
     </Screen>
   );

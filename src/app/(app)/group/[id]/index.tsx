@@ -23,6 +23,7 @@ import { notifyProofUploaded } from '@/features/notifications/notify';
 import { useAuth } from '@/features/auth/auth-context';
 import { isGroupUnlocked } from '@/features/groups/unlocked-groups';
 import { useGroupRealtime } from '@/features/groups/use-group-realtime';
+import { useLocale } from '@/features/settings/locale';
 import { OwedCard } from '@/features/summary/owed-card';
 import { TrendChart } from '@/features/summary/trend-chart';
 import { exportRekapCsv, exportRekapPdf } from '@/features/summary/export-rekap';
@@ -48,6 +49,7 @@ export default function GroupScreen() {
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const { email } = useAuth();
   const c = useTheme();
+  const { t, lang } = useLocale();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +63,9 @@ export default function GroupScreen() {
       g.monthly = await loadAllMonths(id);
       setGroup(g);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal memuat grup');
+      setError(e instanceof Error ? e.message : t('groupLogin.loadFailed'));
     }
-  }, [id, month]);
+  }, [id, month, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +91,11 @@ export default function GroupScreen() {
     return (
       <Screen edges={['bottom', 'left', 'right']}>
         <ThemedText themeColor="danger">{error}</ThemedText>
-        <Button label="Coba lagi" variant="secondary" onPress={() => void load()} />
+        <Button
+          label={t('common.retry')}
+          variant="secondary"
+          onPress={() => void load()}
+        />
       </Screen>
     );
   }
@@ -112,7 +118,7 @@ export default function GroupScreen() {
     try {
       switch (action.type) {
         case 'upload': {
-          const img = await pickProofImage();
+          const img = await pickProofImage(t);
           if (!img) return;
           const out = await submitProof({
             group: g,
@@ -130,22 +136,16 @@ export default function GroupScreen() {
             amount: out.ocrAmount ?? expectedShare(bill, record),
           });
           if (out.isReceipt === false) {
-            Alert.alert(
-              'Bukan bukti transfer',
-              'Gambar yang diupload tidak terlihat seperti bukti transfer bank / e-wallet. Konfirmasi langsung ke yang bayar sebelum ditandai lunas.',
-            );
+            Alert.alert(t('dash.notReceiptTitle'), t('dash.notReceiptBody'));
           } else if (out.suspiciousNote) {
-            Alert.alert('Perlu dicek teliti', out.suspiciousNote);
+            Alert.alert(t('dash.suspiciousTitle'), out.suspiciousNote);
           } else if (!out.matched) {
-            Alert.alert(
-              'Perlu dicek',
-              'Nominal di bukti nggak kebaca / beda dari yang diharapkan. Cek lalu tandai kalau memang sudah bayar.',
-            );
+            Alert.alert(t('dash.reviewTitle'), t('dash.reviewBody'));
           }
           break;
         }
         case 'earlyPayoff': {
-          const img = await pickProofImage();
+          const img = await pickProofImage(t);
           if (!img) return;
           const { matched } = await submitEarlyPayoff({
             group: g,
@@ -155,10 +155,7 @@ export default function GroupScreen() {
             base64: img.base64,
           });
           if (!matched) {
-            Alert.alert(
-              'Nominal beda',
-              'Nominal di bukti nggak cocok sama sisa cicilan. Coba lagi.',
-            );
+            Alert.alert(t('dash.amountDiffTitle'), t('dash.amountDiffBody'));
           }
           break;
         }
@@ -177,7 +174,10 @@ export default function GroupScreen() {
       }
       await load();
     } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Coba lagi');
+      Alert.alert(
+        t('common.failed'),
+        e instanceof Error ? e.message : t('common.retry'),
+      );
     }
   }
 
@@ -195,14 +195,16 @@ export default function GroupScreen() {
           .map((m) => m.name)
           .join(', ')}
         {group.members.some((m) => m.status === 'pending')
-          ? ` · ${group.members.filter((m) => m.status === 'pending').length} menunggu`
+          ? ` · ${t('dash.waiting', {
+              n: group.members.filter((m) => m.status === 'pending').length,
+            })}`
           : ''}
       </ThemedText>
 
       <Segmented
         options={[
-          { label: 'Tagihan', value: 'tagihan' },
-          { label: 'Ringkasan', value: 'ringkasan' },
+          { label: t('dash.tabBills'), value: 'tagihan' },
+          { label: t('dash.tabSummary'), value: 'ringkasan' },
         ]}
         value={tab}
         onChange={setTab}
@@ -214,7 +216,7 @@ export default function GroupScreen() {
             <View style={styles.heroRow}>
               <View>
                 <ThemedText themeColor="textFaint" style={styles.heroLabel}>
-                  Pengeluaran saya
+                  {t('dash.mySpend')}
                 </ThemedText>
                 <ThemedText style={styles.heroValue}>
                   {formatRp(overview.contributions[currentUser] ?? 0)}
@@ -222,7 +224,7 @@ export default function GroupScreen() {
               </View>
               <View>
                 <ThemedText themeColor="textFaint" style={styles.heroLabel}>
-                  Total {monthLabel()}
+                  {t('dash.total', { month: monthLabel(new Date(), lang) })}
                 </ThemedText>
                 <ThemedText style={styles.heroValue}>
                   {formatRp(overview.totalMonth)}
@@ -243,7 +245,7 @@ export default function GroupScreen() {
 
           {group.bills.length === 0 ? (
             <ThemedText themeColor="textFaint" style={styles.empty}>
-              Belum ada tagihan. Tambahkan tagihan pertama.
+              {t('dash.noBills')}
             </ThemedText>
           ) : (
             group.bills.map((bill) => (
@@ -260,7 +262,7 @@ export default function GroupScreen() {
           )}
 
           <Button
-            label="+ Tambah tagihan baru"
+            label={t('dash.addBill')}
             variant="secondary"
             onPress={() =>
               router.push({
@@ -276,36 +278,36 @@ export default function GroupScreen() {
 
           <View style={[styles.hero, { backgroundColor: c.surface }]}>
             <ThemedText style={styles.blockTitle}>
-              Tren pengeluaran bulanan
+              {t('dash.trendTitle')}
             </ThemedText>
-            <TrendChart data={computeMonthlyCategoryTotals(group)} />
+            <TrendChart data={computeMonthlyCategoryTotals(group, lang)} />
             <View style={styles.exportRow}>
               <Button
-                label="Export CSV"
+                label={t('dash.exportCsv')}
                 variant="secondary"
                 style={styles.flex1}
                 onPress={async () => {
                   try {
-                    await exportRekapCsv(group);
+                    await exportRekapCsv(group, lang);
                   } catch (e) {
                     Alert.alert(
-                      'Gagal export',
-                      e instanceof Error ? e.message : 'Coba lagi',
+                      t('dash.exportFailed'),
+                      e instanceof Error ? e.message : t('common.retry'),
                     );
                   }
                 }}
               />
               <Button
-                label="Export PDF"
+                label={t('dash.exportPdf')}
                 variant="secondary"
                 style={styles.flex1}
                 onPress={async () => {
                   try {
-                    await exportRekapPdf(group);
+                    await exportRekapPdf(group, lang);
                   } catch (e) {
                     Alert.alert(
-                      'Gagal export',
-                      e instanceof Error ? e.message : 'Coba lagi',
+                      t('dash.exportFailed'),
+                      e instanceof Error ? e.message : t('common.retry'),
                     );
                   }
                 }}
@@ -314,18 +316,22 @@ export default function GroupScreen() {
           </View>
 
           <View style={[styles.hero, { backgroundColor: c.surface }]}>
-            <ThemedText style={styles.blockTitle}>Pengingat</ThemedText>
+            <ThemedText style={styles.blockTitle}>
+              {t('dash.reminderTitle')}
+            </ThemedText>
             <View style={[styles.reminderBox, { backgroundColor: c.surface2 }]}>
               <ThemedText themeColor="textSecondary" style={styles.reminderText}>
-                {buildReminderText(group, month)}
+                {buildReminderText(group, month, new Date(), lang)}
               </ThemedText>
             </View>
             <Button
-              label="Salin teks pengingat"
+              label={t('dash.copyReminder')}
               variant="secondary"
               onPress={async () => {
-                await Clipboard.setStringAsync(buildReminderText(group, month));
-                Alert.alert('Tersalin', 'Teks pengingat sudah disalin.');
+                await Clipboard.setStringAsync(
+                  buildReminderText(group, month, new Date(), lang),
+                );
+                Alert.alert(t('dash.copied'), t('dash.copiedBody'));
               }}
             />
           </View>
@@ -333,7 +339,7 @@ export default function GroupScreen() {
       )}
 
       <Button
-        label="Kembali ke Home"
+        label={t('dash.backHome')}
         variant="ghost"
         onPress={() => router.replace('/(app)')}
       />

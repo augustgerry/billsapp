@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { toTitleCase } from '@/domain/text';
 import { useAuth } from '@/features/auth/auth-context';
+import { useT } from '@/features/settings/locale';
 import { useTheme } from '@/hooks/use-theme';
 import { createGroup } from '@/lib/groups-repository';
 import { touchRecentGroup } from '@/lib/recent-groups-repository';
@@ -23,6 +24,7 @@ interface Row {
 export default function CreateGroupScreen() {
   const { email: myEmail } = useAuth();
   const c = useTheme();
+  const t = useT();
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [rows, setRows] = useState<Row[]>([
@@ -48,7 +50,7 @@ export default function CreateGroupScreen() {
   async function submit() {
     if (!valid || busy) return;
     if (!includesMe) {
-      setError('Email kamu harus termasuk salah satu anggota.');
+      setError(t('create.needSelf'));
       return;
     }
     setBusy(true);
@@ -65,32 +67,27 @@ export default function CreateGroupScreen() {
         params: { groupId, name: name.trim() },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Gagal membuat grup');
+      setError(e instanceof Error ? e.message : t('create.failed'));
       setBusy(false);
     }
   }
 
   return (
     <Screen edges={['bottom', 'left', 'right']}>
-      <ThemedText themeColor="textSecondary">
-        Untuk pasangan atau keluarga yang urus tagihan bareng.
-      </ThemedText>
+      <ThemedText themeColor="textSecondary">{t('create.subtitle')}</ThemedText>
 
       <TextField
-        label="Nama grup"
+        label={t('create.groupName')}
         value={name}
-        onChangeText={(t) => setName(toTitleCase(t))}
-        placeholder="Contoh: Rumah Kita"
+        onChangeText={(v) => setName(toTitleCase(v))}
+        placeholder={t('create.groupNamePlaceholder')}
       />
 
       <ThemedText themeColor="textSecondary" style={styles.label}>
-        Anggota (min. 2) — nama & email dipakai buat login otomatis
+        {t('create.membersLabel')}
       </ThemedText>
       {rows.map((row, i) => (
-        <View
-          key={i}
-          style={[styles.memberCard, { borderColor: c.border }]}
-        >
+        <View key={i} style={[styles.memberCard, { borderColor: c.border }]}>
           {rows.length > 2 ? (
             <Pressable
               onPress={() => setRows((p) => p.filter((_, idx) => idx !== i))}
@@ -100,14 +97,14 @@ export default function CreateGroupScreen() {
             </Pressable>
           ) : null}
           <TextField
-            placeholder="Nama anggota"
+            placeholder={t('create.memberName')}
             value={row.name}
-            onChangeText={(t) => setRow(i, { name: toTitleCase(t) })}
+            onChangeText={(v) => setRow(i, { name: toTitleCase(v) })}
           />
           <TextField
-            placeholder="Email anggota"
+            placeholder={t('create.memberEmail')}
             value={row.email}
-            onChangeText={(t) => setRow(i, { email: t.trim() })}
+            onChangeText={(v) => setRow(i, { email: v.trim() })}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
@@ -115,22 +112,27 @@ export default function CreateGroupScreen() {
         </View>
       ))}
       <Button
-        label="+ Tambah anggota"
+        label={t('create.addMember')}
         variant="ghost"
         onPress={() => setRows((p) => [...p, { name: '', email: '' }])}
       />
 
       <TextField
-        label="PIN grup (6 digit, dipakai semua anggota buat masuk)"
+        label={t('create.pinLabel')}
         value={pin}
-        onChangeText={(t) => setPin(t.replace(/[^0-9]/g, '').slice(0, 6))}
+        onChangeText={(v) => setPin(v.replace(/[^0-9]/g, '').slice(0, 6))}
         keyboardType="number-pad"
         placeholder="123456"
         maxLength={6}
       />
 
       {error ? <ThemedText themeColor="danger">{error}</ThemedText> : null}
-      <Button label="Buat grup" onPress={submit} disabled={!valid} loading={busy} />
+      <Button
+        label={t('create.submit')}
+        onPress={submit}
+        disabled={!valid}
+        loading={busy}
+      />
     </Screen>
   );
 }

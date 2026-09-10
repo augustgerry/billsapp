@@ -22,6 +22,7 @@ import {
 } from '@/domain/billing';
 import { formatDateTime } from '@/domain/dates';
 import { formatRp, parseRupiah } from '@/domain/money';
+import { useLocale } from '@/features/settings/locale';
 import { useCategoryColors, useTheme } from '@/hooks/use-theme';
 import type { Bill, MemberName, MonthRecord } from '@/types/models';
 
@@ -79,6 +80,7 @@ export function BillCard({
   resolveProofUrl,
 }: BillCardProps) {
   const c = useTheme();
+  const { t, lang } = useLocale();
   const catColor = useCategoryColors();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -88,7 +90,7 @@ export function BillCard({
   const [proofFor, setProofFor] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
 
-  const badge = billBadge(bill, record);
+  const badge = billBadge(bill, record, new Date(), lang);
   const badgeColor =
     badge.kind === 'overdue'
       ? c.danger
@@ -145,10 +147,10 @@ export function BillCard({
       bill.type === 'split' ? `${member} → ${bill.responsible}` : member;
 
     let statusText: string = {
-      paid: 'Lunas',
-      unpaid: 'Belum bayar',
-      review: 'Perlu dicek',
-      awaiting: `Menunggu konfirmasi ${bill.responsible}`,
+      paid: t('card.paid'),
+      unpaid: t('card.unpaid'),
+      review: t('card.review'),
+      awaiting: t('card.awaitingFor', { name: bill.responsible }),
     }[status];
     let statusColor: string =
       status === 'paid'
@@ -156,14 +158,14 @@ export function BillCard({
         : status === 'unpaid'
           ? c.danger
           : c.gold;
-    if (status === 'awaiting' && isPJ) statusText = 'Perlu kamu konfirmasi';
+    if (status === 'awaiting' && isPJ) statusText = t('card.awaitingYou');
 
     const actions: ReactNode[] = [];
     if (status === 'unpaid' && mine) {
       actions.push(
         <RowAction
           key="up"
-          label="Upload bukti"
+          label={t('card.uploadProof')}
           color={c.primaryText}
           loading={busyKey === `upload:${member}`}
           disabled={!!busyKey}
@@ -175,7 +177,7 @@ export function BillCard({
         actions.push(
           <RowAction
             key="re"
-            label="Upload ulang"
+            label={t('card.reupload')}
             color={c.textSecondary}
             loading={busyKey === `reupload:${member}`}
             disabled={!!busyKey}
@@ -189,7 +191,9 @@ export function BillCard({
         actions.push(
           <RowAction
             key="sd"
-            label={bill.type === 'split' ? 'Tandai sudah bayar' : 'Tandai valid'}
+            label={
+              bill.type === 'split' ? t('card.markPaidSplit') : t('card.markValid')
+            }
             color={c.primaryText}
             loading={busyKey === `selfDeclare:${member}`}
             disabled={!!busyKey}
@@ -203,7 +207,7 @@ export function BillCard({
       actions.push(
         <RowAction
           key="ok"
-          label="Konfirmasi"
+          label={t('card.confirm')}
           color={c.success}
           loading={busyKey === `confirm:${member}`}
           disabled={!!busyKey}
@@ -211,7 +215,7 @@ export function BillCard({
         />,
         <RowAction
           key="no"
-          label="Tolak"
+          label={t('card.reject')}
           color={c.danger}
           loading={busyKey === `reject:${member}`}
           disabled={!!busyKey}
@@ -230,7 +234,7 @@ export function BillCard({
             <ThemedText themeColor="textFaint" style={styles.memberAmount}>
               {formatRp(rowAmount)}
               {p?.amount != null && p.status !== 'unpaid'
-                ? ` · terbaca ${formatRp(p.amount)}${p.ocrMatched === false ? ' (beda)' : ''}`
+                ? `${t('card.ocrRead', { amount: formatRp(p.amount) })}${p.ocrMatched === false ? t('card.ocrDiff') : ''}`
                 : ''}
               {p?.platform ? ` · ${p.platform}` : ''}
             </ThemedText>
@@ -241,8 +245,7 @@ export function BillCard({
         </View>
         {p?.isReceipt === false && p.status !== 'unpaid' ? (
           <ThemedText style={[styles.warn, { color: c.danger }]}>
-            ⚠️ Gambar ini tidak terlihat seperti bukti transfer — cek langsung
-            ke yang bayar.
+            {t('card.notReceipt')}
           </ThemedText>
         ) : p?.suspiciousNote && p.status !== 'unpaid' ? (
           <ThemedText style={[styles.warn, { color: c.gold }]}>
@@ -253,13 +256,15 @@ export function BillCard({
         {canView && p?.proofImage ? (
           <View>
             <RowAction
-              label={proofFor === member ? 'Sembunyikan bukti' : 'Lihat bukti'}
+              label={proofFor === member ? t('card.hideProof') : t('card.viewProof')}
               color={c.primaryText}
               onPress={() => toggleProof(member, p.proofImage!)}
             />
             {p.uploadedAt ? (
               <ThemedText themeColor="textFaint" style={styles.uploadedAt}>
-                Diupload {formatDateTime(p.uploadedAt)}
+                {t('card.uploadedAt', {
+                  when: formatDateTime(p.uploadedAt, lang),
+                })}
               </ThemedText>
             ) : null}
             {proofFor === member ? (
@@ -296,7 +301,7 @@ export function BillCard({
         <View style={styles.headerBody}>
           <ThemedText style={styles.name}>{bill.name}</ThemedText>
           <ThemedText themeColor="textFaint" style={styles.meta}>
-            {billMetaText(bill)}
+            {billMetaText(bill, lang)}
           </ThemedText>
         </View>
         <View style={styles.headerRight}>
@@ -315,22 +320,22 @@ export function BillCard({
             editing ? (
               <View style={styles.editBox}>
                 <TextField
-                  label="Nominal baru"
+                  label={t('card.newNominal')}
                   value={draft ? formatRp(draft) : ''}
-                  onChangeText={(t) => setDraft(parseRupiah(t))}
+                  onChangeText={(v) => setDraft(parseRupiah(v))}
                   keyboardType="number-pad"
                   placeholder={formatRp(bill.estimate)}
                 />
                 <View style={styles.row}>
                   <Button
-                    label="Simpan"
+                    label={t('common.save')}
                     onPress={saveEdit}
                     loading={savingEdit}
                     disabled={draft <= 0}
                     style={styles.flex1}
                   />
                   <Button
-                    label="Batal"
+                    label={t('common.cancel')}
                     variant="secondary"
                     onPress={() => setEditing(false)}
                     style={styles.flex1}
@@ -345,7 +350,7 @@ export function BillCard({
                 }}
               >
                 <ThemedText themeColor="primaryText" style={styles.editLink}>
-                  Edit nominal
+                  {t('card.editNominal')}
                 </ThemedText>
               </Pressable>
             )
@@ -353,13 +358,16 @@ export function BillCard({
 
           {done ? (
             <ThemedText themeColor="textFaint" style={styles.doneNote}>
-              Semua cicilan sudah lunas.
+              {t('card.installmentDone')}
             </ThemedText>
           ) : bill.type === 'split' ? (
             <>
               <View style={[styles.memberRow, { borderTopColor: c.border }]}>
                 <ThemedText themeColor="textFaint" style={styles.memberName}>
-                  {bill.responsible} menalangi ke penyedia · {formatRp(share)}
+                  {t('card.fronts', {
+                    name: bill.responsible,
+                    amount: formatRp(share),
+                  })}
                 </ThemedText>
               </View>
               {required.map((m) => memberRow(m, share))}
@@ -373,7 +381,7 @@ export function BillCard({
               <View style={styles.memberTop}>
                 <View style={styles.memberLeft}>
                   <ThemedText style={styles.memberName}>
-                    Lunasi sisa {payoff.remaining}x sekaligus
+                    {t('card.payoffRow', { n: payoff.remaining })}
                   </ThemedText>
                   <ThemedText themeColor="textFaint" style={styles.memberAmount}>
                     {formatRp(payoff.remainingAmount)}
@@ -383,7 +391,7 @@ export function BillCard({
               {isPJ ? (
                 <View style={styles.actions}>
                   <RowAction
-                    label="Upload bukti pelunasan"
+                    label={t('card.payoffUpload')}
                     color={c.primaryText}
                     loading={busyKey === 'earlyPayoff'}
                     disabled={!!busyKey}
