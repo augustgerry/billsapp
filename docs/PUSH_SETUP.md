@@ -15,10 +15,15 @@ Kode-nya sudah ada dan ter-deploy:
 
 `getExpoPushTokenAsync` butuh:
 1. **Development Build** (bukan Expo Go — Expo Go SDK 53+ nggak support remote push).
-2. **EAS `projectId`** di `app.json` → `extra.eas.projectId`.
+2. **EAS `projectId`** di `app.json` → `extra.eas.projectId` (diisi otomatis oleh
+   `eas init`).
 
 Sampai keduanya ada, `registerPushToken` no-op dengan warning di console —
 sisa app tetap jalan normal.
+
+> `ios.bundleIdentifier` & `android.package` (`com.app.kongsi`) sudah keset di
+> `app.json`, jadi `eas build:configure` nggak bakal nanya lagi. Butuh **akun
+> Apple Developer** (iOS) / **Google Play Console** (Android) buat build-nya.
 
 ## Langkah bikin dev build
 

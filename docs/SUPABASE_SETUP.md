@@ -1,10 +1,14 @@
 # Setup Supabase untuk Kongsi
 
-Status project `wyhihlddtnbyqvjutjyf` (region ap-southeast-1):
+Status project `wyhihlddtnbyqvjutjyf` (region ap-southeast-1) — **LIVE**:
 - ✅ `.env` terisi (URL + publishable key)
-- ✅ Migrasi `20260909000000_init.sql` sudah di-apply (7 tabel, RLS, RPC, bucket `proofs`)
-- ⬜ Template email OTP (langkah 5)
-- ⬜ Edge Function `read-proof` + secret `ANTHROPIC_API_KEY` (langkah 6)
+- ✅ **8 migrasi** di-apply (8 tabel, RLS penuh, semua RPC, bucket `proofs`,
+  trigger edit-nominal, realtime publication, undangan anggota, hapus akun)
+- ✅ Edge functions **deployed**: `read-proof`, `notify-proof`, `delete-account`
+- ⚠️ Secret `ANTHROPIC_API_KEY` keset TAPI akun Anthropic **$0 credit** → OCR
+  error sampai di-top-up
+- ⚠️ **"Confirm email" saat ini OFF** — sign up langsung dapat sesi, nggak ada
+  layar OTP. Nyalain sebelum produksi (langkah 5) + pasang custom SMTP.
 
 Langkah di bawah buat referensi / setup dari nol.
 
@@ -46,8 +50,18 @@ jalanin — dia bakal pertahanin `project_id`.
 supabase db push
 ```
 
-Ini bikin: `profiles`, `groups`, `group_members`, `bills`, `bill_months`,
-`payments`, RPC `create_group`, bucket storage `proofs`, dan semua RLS policy.
+Meng-apply 8 file di `supabase/migrations/` (urut):
+
+| Migrasi | Isi |
+|---|---|
+| `..._init` | 7 tabel (`profiles`, `groups`, `group_members`, `bills`, `bill_months`, `payments`, `recent_groups`), RLS, RPC `create_group` / `get_group_for_join` / `duplicate_group`, bucket `proofs` |
+| `..._proof_analysis` | kolom `is_receipt` / `platform` / `suspicious_note` hasil OCR |
+| `..._push_tokens` | tabel `push_tokens` + RPC `push_tokens_for_group_member` |
+| `..._realtime` | tabel `payments` / `bill_months` / `bills` masuk realtime publication |
+| `..._guard_estimate` | trigger: cuma PJ yang bisa ubah nominal tagihan |
+| `..._member_invites` | `group_members.status` (pending/active), RPC `list_my_invites` / `respond_to_invite` |
+| `..._invites_realtime_and_duplicate_rename` | `group_members` masuk publication + RLS "read own rows by email"; `duplicate_group` bisa ganti nama |
+| `..._delete_account` | RPC `delete_my_account_data()` |
 
 Cek cepat di SQL editor:
 
@@ -58,16 +72,38 @@ select tablename, rowsecurity from pg_tables where schemaname = 'public';
 
 ## 5. Auth settings (dashboard → Authentication)
 
-- **Providers → Email**: aktif. "Confirm email" = ON (biar ada kode OTP).
-- **Email Templates → Confirm signup**: pastiin body-nya ngirim
-  `{{ .Token }}` (kode 6 digit), bukan cuma `{{ .ConfirmationURL }}` —
-  app minta kode manual, bukan link.
-- **URL Configuration → Redirect URLs**: tambahin `billsapp://` dan URL dev
-  Expo (`exp://` / `http://localhost:8081`).
-- (Opsional) matiin "Enable email confirmations" pas dev lokal kalau mau
-  skip OTP — tapi flow `verifyEmail` di app mengasumsikan ON.
+**Status sekarang: "Confirm email" OFF** (biar dev nggak kepentok rate-limit
+SMTP bawaan). Efeknya: sign up langsung dapat sesi, layar `verify` di-skip.
 
-## 6. Edge Function `read-proof`
+Buat **produksi** (wajib sebelum launch):
+
+- **Providers → Email**: "Confirm email" = **ON**.
+- **Project Settings → Authentication → SMTP**: pasang **custom SMTP** dengan
+  **domain sendiri** (Resend / Postmark / SES / dll). SMTP bawaan Supabase cuma
+  kirim ke email anggota tim + rate-limit sangat ketat — nggak cukup buat user
+  beneran.
+- **Email Templates → Confirm signup**: body harus ngirim `{{ .Token }}` (kode 6
+  digit), bukan cuma `{{ .ConfirmationURL }}` — app minta kode manual, bukan link.
+- **URL Configuration → Redirect URLs**: tambahin `billsapp://` dan URL dev Expo
+  (`exp://` / `http://localhost:8081`).
+
+Flow `verifyEmail` di app mengasumsikan "Confirm email" ON.
+
+## 6. Edge Functions
+
+Tiga function di `supabase/functions/`. Deploy semua sekaligus:
+
+```bash
+supabase functions deploy read-proof
+supabase functions deploy notify-proof
+supabase functions deploy delete-account
+```
+
+`notify-proof` (push ke PJ abis upload bukti) & `delete-account` (hapus akun)
+nggak butuh secret tambahan — `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` /
+`SUPABASE_ANON_KEY` otomatis ada di runtime edge.
+
+### `read-proof` (OCR)
 
 Set key Anthropic sebagai **secret** (bukan di `.env` app):
 
@@ -96,21 +132,15 @@ curl -i -X POST "https://<ref>.functions.supabase.co/read-proof" \
 `verify_jwt = true` (di `config.toml`) — produksi harus pakai access token user,
 bukan anon key.
 
-### Edge Function `delete-account` (hapus akun — wajib buat App Store)
-
-Nggak butuh secret tambahan (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` /
-`SUPABASE_ANON_KEY` udah otomatis ada di runtime edge).
-
-```bash
-supabase db push                      # apply 20260911010000_delete_account.sql
-supabase functions deploy delete-account
-```
+### Catatan `delete-account` (hapus akun — wajib buat App Store)
 
 Alurnya: client panggil fungsi dengan JWT user → fungsi jalanin RPC
 `delete_my_account_data()` sebagai user itu (lepasin kepemilikan/keanggotaan
 grup + hapus data pribadi) → `auth.admin.deleteUser()` hapus akun auth.
 Grup yang masih ada anggota aktif lain: kepemilikan dialihkan ke anggota
 tertua, grup tetap ada. Grup tanpa anggota aktif lain: kehapus (cascade).
+Butuh migrasi `..._delete_account` (RPC) + function `delete-account` ter-deploy —
+dua-duanya sudah live di project ini.
 
 ## 7. Storage
 

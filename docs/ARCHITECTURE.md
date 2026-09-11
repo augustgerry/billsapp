@@ -1,225 +1,311 @@
-# Kongsi — Arsitektur & Status Port
+# Kongsi — Arsitektur & Status (terkini)
 
-Dokumen ini nyatet keputusan porting dari prototipe (`kongsi-pilot.html`) ke
-React Native (Expo SDK 57) + Supabase. Dibaca bareng `PROJECT_BRIEF.md`.
+Port prototipe `kongsi-pilot.html` → **React Native (Expo SDK 57) + Supabase**.
+Dokumen ini adalah snapshot status paling baru. Dibaca bareng `PROJECT_BRIEF.md`
+(spesifikasi), `docs/SUPABASE_SETUP.md` (backend), `docs/PUSH_SETUP.md` (notif).
 
-## Status
+Terakhir diperbarui: **2026-09-11**.
 
-| Bagian | Lokasi | Catatan |
+- Repo: `main` sinkron dengan `origin/main`.
+- Supabase project: `wyhihlddtnbyqvjutjyf` (region `ap-southeast-1` / Singapore) — **LIVE**.
+- Kualitas: `npm run typecheck` bersih · **58** domain test + **11** render test lulus ·
+  `expo export` (iOS & Android) sukses tanpa warning · `expo-doctor` 21/21.
+
+---
+
+## 1. Fitur yang SUDAH selesai & berfungsi
+
+### Auth & identitas
+- Daftar (email + password + Nomor HP dengan **kode negara**, ~130 negara, disimpan
+  format `+62…`), login, verifikasi OTP email, kirim ulang kode, keluar.
+- Sesi persist di `expo-secure-store` (di-chunk 1800 char/key — limit iOS ~2 KB).
+- **Hapus akun** dari dalam app (Pengaturan) — dialog peringatan dulu, lalu edge
+  function `delete-account`: lepas kepemilikan/keanggotaan grup + hapus data
+  pribadi, lalu `auth.admin.deleteUser`. Grup yang masih ada anggota aktif lain
+  tetap ada (kepemilikan pindah ke anggota tertua); grup tanpa anggota lain
+  kehapus. **Terverifikasi end-to-end lawan project live.**
+- Identitas grup = email JWT cocok di `group_members` + status `active`. PIN 6
+  digit = gate UX kedua di client; RLS yang jaga data.
+
+### Grup
+- Buat grup (RPC `create_group`, atomik, pembuat `active` / sisanya `pending`).
+- Join via kode + lookup (`get_group_for_join`), masuk grup dengan PIN.
+- **Sistem undangan**: anggota baru `pending` sampai menerima. Section "Undangan"
+  di Home (dicari dari email login vs email pending di semua grup), tombol
+  Terima / Tolak, real-time (`use-invites-realtime`).
+- Kebab menu di "Lanjutkan": **Duplikat** (grup baru, anggota sama, tanpa
+  tagihan, bisa ganti nama) & **Hapus dari daftar** (konfirmasi dulu).
+- **Badge notifikasi merah** di kartu "Lanjutkan" — jumlah pembayaran yang perlu
+  dikonfirmasi user; **cuma PJ** yang lihat.
+
+### Tagihan & pembayaran
+- Tambah tagihan: kategori (6 jenis), single / split, blok Cicilan (tenor, sudah
+  dibayar berapa kali, mode total vs per bulan, siapa yang menalangi).
+- **Date picker terpadu** (`DateField`) — satu field, popup hari+bulan+tahun,
+  bisa diketik `DD/MM/YYYY`. Tanggal jatuh tempo **cuma** untuk Cicilan.
+- Dashboard tab **Tagihan**: hero kontribusi, kartu per bill, expand rincian,
+  Edit nominal (dijaga trigger DB — cuma PJ).
+- Upload bukti transfer → OCR → status (`unpaid`/`paid`/`review`/`awaiting`),
+  self-declare / konfirmasi / tolak / upload ulang, lunasi dipercepat (single),
+  lihat bukti.
+- Dashboard tab **Ringkasan**: "siapa belum bayar", grafik tren per kategori,
+  export **CSV + PDF** (`expo-print`), generator teks reminder + salin.
+- Anggota `pending` sudah bisa dipilih jadi PJ / anggota split (tanpa label
+  khusus).
+
+### Realtime
+- `use-group-realtime` — dashboard auto-refresh saat anggota lain update
+  pembayaran. Channel pakai topic unik per mount (`src/lib/realtime.ts`) supaya
+  nggak kena error "cannot add postgres_changes callbacks after subscribe()".
+
+### OCR bukti transfer (edge function `read-proof`)
+- Deployed. Kirim foto → Anthropic vision → `{ amount, isReceipt, platform,
+  suspiciousNote }`. Model default `claude-sonnet-5` (override via secret
+  `ANTHROPIC_MODEL`). Toleransi match `< Rp1.000`.
+- ⚠️ Butuh kredit Anthropic (lihat §2). Tanpa kredit, upload bukti masuk
+  `review` — semua alur status lain tetap jalan.
+
+### Push notification (edge function `notify-proof`)
+- Deployed. Setelah upload bukti, PJ tagihan dapat push (service role cari
+  device token lewat `push_tokens_for_group_member`, kirim ke Expo Push API).
+- Kode client (`features/notifications/*`) siap. **No-op sampai ada Development
+  Build + EAS `projectId`** (lihat §2 & `docs/PUSH_SETUP.md`).
+
+### Tampilan & bahasa
+- **Light / Dark / Ikuti Sistem**, persist per device.
+- Accent **kuning** (`#EAB308` light / `#FACC15` dark) + token `primaryOn`
+  (teks gelap di atas tombol kuning). Warna status (hijau/merah/oranye) &
+  kategori tagihan **tidak** ikut berubah.
+- **i18n Indonesia / English** — toggle di Pengaturan, ~220 string + domain
+  display strings (tanggal, badge, meta tagihan, reminder, export).
+- Auto-kapital nama (grup/anggota/tagihan) saat diketik.
+- Toolbar "Selesai" di atas keyboard angka (iOS `InputAccessoryView`, Android
+  tombol inline).
+- Form keyboard-aware (field yang di-fokus auto-scroll di atas keyboard).
+- Ikon gerigi (bukan teks) untuk Pengaturan di Home.
+- Brand mark "split ring" + wordmark "Kongsi", di-generate dari kode
+  (`scripts/gen-logo.mjs`) → app icon, splash (light + dark), adaptive icon,
+  favicon. Splash background = warna background app biar transisi mulus.
+- Halaman **Legal** (Kebijakan Privasi & Syarat/Ketentuan), dwibahasa,
+  di-link dari Pengaturan.
+
+### Metadata build
+- `app.json`: `name` "Kongsi", `version` "1.0.0", `ios.bundleIdentifier` &
+  `android.package` = `com.app.kongsi`, `ios.buildNumber` "1",
+  `android.versionCode` 1. `slug` "billsapp" (dipertahankan — dipakai EAS).
+
+---
+
+## 2. Yang masih PENDING dari sisi kamu (bukan pekerjaan kode)
+
+| # | Item | Kenapa perlu / dampak sekarang |
 |---|---|---|
-| Tipe domain | `src/types/models.ts` | 1:1 dengan data model di brief |
-| Logika billing/cicilan/status | `src/domain/{billing,money,dates}.ts` | port murni, dependency-free |
-| Unit test | `src/**/*.test.ts` | 51 test, `npm test` (pakai `tsx`) |
-| Skema DB + RLS | `supabase/migrations/*.sql` | **applied** ke `wyhihlddtnbyqvjutjyf` (8 tabel, RLS on, RPC, bucket `proofs`, trigger edit-nominal, realtime publication) |
-| Edge Function OCR | `supabase/functions/read-proof/` | **deployed** (v2). Balikin amount + isReceipt + platform + suspiciousNote. ⚠️ akun Anthropic $0 credit — OCR error sampai di-top-up |
-| Edge Function notify | `supabase/functions/notify-proof/` | **deployed**. Push ke PJ abis upload bukti (service role) |
-| Supabase client | `src/lib/supabase.ts` | typed `createClient<Database>` (generated `database.types.ts`), session di `expo-secure-store` (chunked) |
-| Auth context | `src/features/auth/auth-context.tsx` | register → OTP → login, + registrasi push token, di-wire di root `_layout` |
-| Repository layer | `src/lib/*-repository.ts`, `mappers.ts`, `proofs.ts` | row ↔ domain, typed, semua lewat RLS |
-| Push notifications | `src/features/notifications/*` | token registration + notify-proof caller — butuh dev build (lihat docs/PUSH_SETUP.md) |
-| Realtime | `src/features/groups/use-group-realtime.ts` | dashboard auto-refresh pas anggota lain update |
-| Tema | `src/features/settings/theme-preference.tsx` | Terang/Gelap/Ikuti Sistem, persist SecureStore. Accent = **gold** (`#D6AE52` / `#9C7A1E`), `primaryOn` buat teks di tombol gold |
-| Bahasa | `src/features/settings/{locale,strings}.tsx` | id/en toggle di Settings, persist SecureStore. Domain display strings terima arg `locale` |
-| Undangan anggota | `group_members.status` + RPC `list_my_invites`/`respond_to_invite` | pending → active; section "Undangan" di Home |
-| Routing auth-gated | `src/app/_layout.tsx` + `(auth)/` `(app)/` | Stack + guard + Supabase config gate |
-| Layar auth | `src/app/(auth)/{login,register,verify}.tsx` | fungsional, Enter submit, tombol disable |
-| Layar Home / Buat / Join / Login grup | `src/app/(app)/*` | fungsional (recent list, create RPC, join lookup, PIN) |
-| Tambah tagihan | `src/app/(app)/group/[id]/add-bill.tsx` | fungsional — kategori, tanggal manual, single/split, blok Cicilan |
-| Dashboard tab Tagihan | `src/app/(app)/group/[id]/index.tsx` + `features/bills/bill-card.tsx` | fungsional — hero kontribusi, card per bill, expand rincian, Edit nominal |
-| Upload bukti + alur status | `features/bills/{proof-actions,pick-proof-image}.ts` | fungsional — upload→OCR→status, self-declare/confirm/reject/reupload, lunasi dipercepat single, lihat bukti |
-| Dashboard tab Ringkasan | `features/summary/*` | fungsional — "siapa belum bayar", chart tren (Views), export CSV + PDF, generator reminder + salin |
-| Pengaturan | `src/app/(app)/settings.tsx` | info akun, toggle tema, keluar |
+| 1 | **Akun Apple Developer** ($99/th) | Wajib buat build & submit ke App Store dan buat dev build iOS. |
+| 2 | **Google Play Console** ($25 sekali) | Wajib buat rilis ke Play Store (internal testing sekalipun). |
+| 3 | **Isi kredit Anthropic** (console.anthropic.com) | `read-proof` deployed tapi API balikin "credit balance too low". Sampai diisi, OCR nggak jalan → upload bukti masuk `review` manual. Semua fitur lain normal. |
+| 4 | **Development Build buat push** | `eas init` (bikin `extra.eas.projectId`) + `eas build --profile development`. Expo Go SDK 53+ nggak support remote push. Tanpa ini `registerPushToken` no-op. Langkah lengkap: `docs/PUSH_SETUP.md`. |
+| 5 | **Domain sendiri + custom SMTP buat email OTP produksi** | SMTP bawaan Supabase cuma kirim ke email anggota tim + rate-limit ketat, dan "Confirm email" saat ini **OFF** (sign up langsung dapat sesi, nggak ada layar OTP). Buat produksi: nyalain "Confirm email", pasang custom SMTP (Resend/Postmark/SES) dengan domain sendiri, pastikan template "Confirm signup" pakai `{{ .Token }}`. Detail: `docs/SUPABASE_SETUP.md` §5. |
+| 6 | **Testing bareng user asli** | Alur 2+ orang (undangan, split, konfirmasi pembayaran, badge PJ, push) paling meyakinkan diuji dengan device + akun beneran, bukan emulator. |
 
-Produksi bundle (`expo export --platform ios`) sukses; `npm run typecheck` bersih; 51 test lulus.
+Catatan device: kalau muncul **"JWT issued at future"**, jam device/emulator
+meleset — set Date & time ke Automatic. Bukan bug app.
 
-## Struktur folder
+---
+
+## 3. Struktur folder
 
 ```
 src/
-  app/                       # expo-router (file-based)
-    _layout.tsx              # providers + Supabase gate + Stack
-    index.tsx                # redirect: session -> (app), else (auth)/login
-    (auth)/{login,register,verify}.tsx
+  app/                          # expo-router (file-based routing)
+    _layout.tsx                 # providers (tema, locale, Supabase gate, Auth) + Stack + splash
+    index.tsx                   # redirect: ada sesi -> (app), else (auth)/login
+    (auth)/{login,register,verify}.tsx + _layout.tsx
     (app)/
-      index.tsx              # Home (recent groups, buat / join)
-      create-group.tsx  join-group.tsx  group-login.tsx (PIN)
-      group/[id]/{index,add-bill}.tsx    # dashboard skeleton
-  domain/                    # aturan bisnis murni — TIDAK impor React/RN
-    billing.ts  money.ts  dates.ts  *.test.ts
-  types/models.ts
-  lib/
-    env.ts  supabase.ts  database.types.ts  mappers.ts
-    groups-repository.ts  bills-repository.ts  payments-repository.ts
-    recent-groups-repository.ts  proofs.ts
+      _layout.tsx               # guard sesi + daftar Stack.Screen
+      index.tsx                 # Home (Undangan, Lanjutkan + badge, Buat/Join)
+      create-group.tsx  join-group.tsx  group-login.tsx  settings.tsx  legal.tsx
+      group/[id]/{index,add-bill}.tsx   # dashboard (Tagihan/Ringkasan) + form tagihan
+  domain/                       # aturan bisnis MURNI — tidak impor React/RN
+    billing.ts money.ts dates.ts text.ts email.ts category.ts i18n.ts + *.test.ts
+  types/models.ts               # tipe domain (camelCase), 1:1 dgn data model brief
+  lib/                          # jembatan ke Supabase
+    env.ts supabase.ts realtime.ts
+    db.ts                       # alias tipe di atas database.types.ts (generated)
+    database.types.ts           # `supabase gen types` — JANGAN diedit tangan
+    mappers.ts                  # row (snake_case) <-> domain (camelCase)
+    {groups,bills,payments,recent-groups,attention}-repository.ts  proofs.ts
   features/
-    auth/auth-context.tsx
-    groups/unlocked-groups.ts    # in-memory "PIN sudah dimasukkan" set
-  components/ui/               # Screen, Button, TextField, TextLink, LoadingScreen
-  constants/theme.ts           # palet dark-first (dari prototipe) + kategori
+    auth/         auth-context.tsx  country-codes.ts  phone-field.tsx
+    groups/       use-group-realtime.ts  use-invites-realtime.ts  unlocked-groups.ts
+    bills/        bill-card.tsx  category-icon.tsx  proof-actions.ts  pick-proof-image.ts
+    summary/      owed-card.tsx  trend-chart.tsx  export-rekap.ts
+    notifications/ push.ts  notify.ts
+    settings/     locale.tsx  strings.ts  theme-preference.tsx
+    legal/        content.ts   # draft Privacy Policy + ToS (id/en)
+  components/
+    ui/           Screen Button TextField DateField Segmented ActionSheet
+                  PromptDialog LoadingScreen TextLink keyboard-*  ...
+    brand/wordmark.tsx   supabase-gate.tsx   themed-text.tsx
+  hooks/use-theme.ts
+  constants/theme.ts            # palet light + dark, warna kategori, spacing
+  __rtests__/                   # render smoke test (jest-expo) — TIDAK di src/app/
+
 supabase/
-  migrations/20260909000000_init.sql   functions/read-proof/index.ts   config.toml
-docs/
+  migrations/*.sql              # 8 file, semua applied ke project live
+  functions/{read-proof,notify-proof,delete-account}/   # Deno edge functions
+  config.toml                   # config CLI minimal (+ verify_jwt per function)
+
+scripts/gen-logo.mjs            # generate semua aset brand dari kode (pngjs)
+docs/                           # dokumen ini + SUPABASE_SETUP + PUSH_SETUP
 ```
 
-## Domain layer — mapping dari prototipe
+**Aturan lapisan:** `domain/` tidak boleh impor React/RN/Supabase (murni, di-test
+dengan `tsx --test`). `lib/` yang ngomong ke Supabase & map row↔domain. `features/`
+& `app/` yang nyambungin ke UI. Kolom DB `snake_case`, domain TS `camelCase`.
 
-| Prototipe (`kongsi-pilot.html`) | Port (`src/domain/`) |
-|---|---|
-| `isInstallmentDone(bill)` | `isInstallmentDone` |
-| `requiredMembers(bill)` | `requiredMembers` |
-| `maybeAdvanceInstallment(bill, rec)` | `maybeAdvanceInstallment` (+ guard, lihat bawah) |
-| `getMonthRecord` (mutating) | `readMonthRecord` (murni, tidak bikin record) |
-| upload handler match/mismatch | `applyProofUpload` |
-| tombol "Tandai valid" / "Tandai sudah bayar" | `applySelfDeclare` |
-| `[data-confirmpay]` | `applyConfirm` |
-| `[data-rejectpay]` | `applyReject` |
-| "Upload ulang" (baru) | `applyReupload` + `canReupload` |
-| `[data-payoff]` (lunasi dipercepat) | `applyEarlyPayoff` + `earlyPayoffInfo` |
-| "Edit nominal" | `applyEditNominal` + `canEditNominal` |
-| loop agregasi di `renderGroup` | `monthlyOverview` |
-| badge status bill | `billBadge` |
-| `metaText` | `billMetaText` |
-| `btnReminder` | `buildReminderText` |
-| `computeMonthlyCategoryTotals`, `buildExportRows` | sama |
+---
 
-Semua fungsi `apply*` **murni**: nge-clone input, balikin state baru
-(`{ bill, record }`). Yang manggil yang nyimpen ke Supabase.
+## 4. Arsitektur singkat
 
-### 3 perubahan sengaja dari prototipe
-
-1. **Guard idempotensi cicilan** (`MonthRecord.installmentAdvanced`).
-   Di prototipe, `maybeAdvanceInstallment` bisa naikin `paidCount` lebih dari
-   sekali per bulan kalau ada event `paid` berulang (mis. member re-upload
-   bukti). Sekarang: begitu bulan itu udah naik counter, `installmentAdvanced`
-   di-set dan nggak akan naik lagi bulan itu. → **open question #1**.
-
-2. **`MemberPayment.ocrMatched` beneran disimpan.** Prototipe nyebut field ini
-   di `renderMemberRow` tapi nggak pernah nge-set. Sekarang diisi tiap upload,
-   biar PJ ada konteks pas mau konfirmasi pembayaran `awaiting`. → **open
-   question #4**.
-
-3. **Jalur "Upload ulang" dari `review`** (`applyReupload` + `canReupload`).
-   Di prototipe, pembayaran `review` cuma bisa maju (self-declare) — nggak ada
-   cara balik buat foto ulang. Sekarang pengupload bisa reset ke `unpaid` +
-   hapus bukti lama biar coba foto yang lebih jelas. Beda sama "Tandai sudah
-   bayar" (`applySelfDeclare`) yang tetap lanjut ke `awaiting`. → **open
-   question #3**.
-
-## Pertanyaan terbuka — status
-
-Poin 1, 2, 4, 6 dikonfirmasi user (2026-09-09). Poin 3 & 5 dikoreksi.
-
-| # | Isu | Keputusan |
-|---|---|---|
-| 1 | `paidCount` nggak pernah turun kalau pembayaran `awaiting` ditolak setelah cicilan sempat "lunas" bulan itu | ✅ Ikut prototipe: **tidak** decrement. Guard cuma nyegah double-*increment*. |
-| 2 | PJ nggak bisa dorong pembayaran split dari `review` (cuma pengupload) | ✅ Ikut prototipe: hanya pengupload. `canSelfDeclare` mencerminkan ini. |
-| 3 | `review` nggak punya jalur "Tolak" | ✏️ **Dibenerin.** Tambah "Upload ulang" (`applyReupload`): reset ke `unpaid` + hapus bukti lama, buat foto ulang. Beda dari "Tandai sudah bayar" (→ `awaiting`). |
-| 4 | Simpan hasil OCR + flag match | ✅ **Ya**, disimpan (`amount`, `ocrMatched`). |
-| 5 | Model OCR | ✏️ Default **`claude-sonnet-5`** (bukan opus) — cuma baca nominal, dipanggil berkali-kali/bulan, biaya diminimalin. Override via secret `ANTHROPIC_MODEL`. Toleransi match tetap `< Rp1.000`. |
-| 6 | Cicilan+split: `responsible` selalu ∈ `splitMembers` | ✅ Benar. Constraint DB `bills_split_has_members` (≥2). |
-
-## Data model: prototipe blob → tabel Supabase
-
-Prototipe nyimpen 1 grup = 1 JSON di `window.storage`. Sekarang relasional:
+### Data model (prototipe blob → tabel relasional)
 
 | Prototipe | Tabel | Kunci |
 |---|---|---|
-| `account` (`kongsi:acct:<email>`) | `auth.users` + `public.profiles` | `profiles.wa` |
+| `account` | `auth.users` + `public.profiles` | `profiles.wa` (Nomor HP) |
 | `group` | `groups` | `code` unik, `pin` (plaintext, RLS jaga) |
-| `group.members[]` | `group_members` | `(group_id, lower(email))` unik |
+| `group.members[]` | `group_members` | `(group_id, lower(email))` unik, `status` pending/active |
 | `group.bills[]` | `bills` | field cicilan nullable kecuali `category='Cicilan'` |
 | `group.monthly[YYYY-MM][billId]` | `bill_months` | `amount` override, `installment_advanced` |
-| `...payments[memberName]` | `payments` | `(bill_id, month, member)` |
-| `proofImage` (base64) | Storage bucket `proofs` | path `<group_id>/<bill_id>/<month>/<member>.jpg` |
-| `kongsi:recent:<email>` | **belum** — rencana tabel `recent_groups` atau simpan lokal | daftar pribadi "Lanjutkan" |
+| `...payments[member]` | `payments` | `(bill_id, month, member)` |
+| `proofImage` (base64) | Storage bucket `proofs` (privat) | `<group_id>/<bill_id>/<month>/<member>.jpg` |
+| `kongsi:recent:<email>` | `recent_groups` | daftar pribadi "Lanjutkan" (hide ≠ delete grup) |
+| device push token | `push_tokens` | `(user_id, token)` |
 
-**Penamaan:** kolom DB `snake_case`, domain TS `camelCase`. Mapping-nya nanti di
-`src/lib/*-repository.ts` (belum dibuat). Contoh: `paid_count` ↔ `paidCount`,
-`split_members` ↔ `splitMembers`.
+Migrasi (urut): `init` → `proof_analysis` → `push_tokens` → `realtime` →
+`guard_estimate` → `member_invites` → `invites_realtime_and_duplicate_rename` →
+`delete_account`.
 
-### Identitas member (RLS)
+### RLS
 
-Akses ke grup ditentukan **cuma** dari: apakah email JWT ada di
-`group_members` grup itu. Fungsi `is_group_member(gid)` (SECURITY DEFINER,
-biar nggak rekursi RLS) dipakai semua policy. PIN 6 digit dicek di client
-sebagai gate kedua setelah identitas ketemu — persis alur brief.
+Semua akses lewat `is_group_member(gid)` (SECURITY DEFINER, `status='active'`,
+biar nggak rekursi). Grup nggak punya policy DELETE — dihapus cuma lewat RPC
+(`delete_my_account_data`) atau cascade. RPC penting (semua SECURITY DEFINER):
+`create_group`, `get_group_for_join`, `duplicate_group`, `list_my_invites`,
+`respond_to_invite`, `delete_my_account_data`, `push_tokens_for_group_member`.
 
-`create_group(name, pin, members jsonb)` RPC (SECURITY DEFINER) bikin grup +
-members atomik, dan nolak kalau email pemanggil nggak ada di `members`.
+### Auth flow
 
-## Auth flow
+`signUp` → (kalau "Confirm email" ON) `{ needsVerification: true }` → `verify`
+screen → `verifyOtp({type:'signup'})`. Setelah ada sesi, `wa` disalin ke
+`profiles`. `<AuthProvider>` di root. `(auth)/_layout` redirect ke `(app)` kalau
+ada sesi; `(app)/_layout` sebaliknya.
 
-`src/features/auth/auth-context.tsx`:
+### OCR flow
 
-- `signUp({email,password,wa})` → `supabase.auth.signUp`, `wa` masuk
-  `user_metadata`. Kalau email confirmation aktif (default), balikin
-  `{ needsVerification: true }`.
-- `verifyEmail({email,token})` → `verifyOtp({type:'signup'})`. Setelah ada
-  session, `wa` disalin ke `profiles` (`syncProfile`).
-- `signIn`, `signOut`, `resendCode` standar.
-- Session persist di `expo-secure-store`, di-chunk 1800 char/key (limit iOS
-  ~2KB). Web pakai `localStorage` (default supabase-js).
-- `<AuthProvider>` di root `_layout.tsx`. Guard: `(auth)/_layout` redirect ke
-  `(app)` kalau ada session; `(app)/_layout` redirect ke `(auth)/login` kalau
-  nggak. PIN grup = gate UX kedua (`features/groups/unlocked-groups.ts`,
-  in-memory) — RLS yang jaga data beneran.
+Client upload foto ke Storage → panggil `read-proof` (base64) → Anthropic vision
+→ `{ amount, ... }` → `proof-actions.ts` hitung match → tulis `payments` +
+`bill_months` + `bills.paid_count`. Key Anthropic **cuma** di secret edge
+function, nggak pernah di bundle app.
 
-## OCR flow
+### 3 perubahan sengaja dari prototipe
 
-Client → upload foto ke Storage (`proofs.ts uploadProof`) → panggil Edge
-Function `read-proof` (`readProof`) dengan base64 → function panggil Anthropic
-vision → balikin `{ amount }` → client jalanin
-`applyProofUpload(bill, record, { ocrAmount, ... })` → `commitBillRecord`
-(tulis `payments` + `bill_months` + `bills.paid_count` kalau berubah).
-Alur status/aksi lain: `applySelfDeclare` / `applyConfirm` / `applyReject` /
-`applyReupload` → `commitBillRecord` / `writeMonthRecord`. UI-nya belum ada.
+1. **Guard idempotensi cicilan** (`MonthRecord.installmentAdvanced`) — `paidCount`
+   nggak bisa naik dua kali dalam sebulan walau ada event `paid` berulang.
+2. **`ocrMatched` beneran disimpan** — prototipe nyebut field ini tapi nggak
+   pernah nge-set; sekarang diisi tiap upload buat konteks PJ.
+3. **Jalur "Upload ulang" dari `review`** — pengupload bisa reset ke `unpaid` +
+   hapus bukti lama buat foto ulang (beda dari "Tandai sudah bayar" → `awaiting`).
 
-Key Anthropic **cuma** di secret Edge Function, nggak pernah di bundle app.
+### Pertanyaan terbuka (dikonfirmasi user 2026-09-09)
 
-## Cara jalanin (dev)
+| # | Isu | Keputusan |
+|---|---|---|
+| 1 | `paidCount` nggak turun kalau `awaiting` ditolak setelah sempat "lunas" | Ikut prototipe: **tidak** decrement. |
+| 2 | PJ nggak bisa dorong pembayaran split dari `review` | Ikut prototipe: hanya pengupload. |
+| 3 | `review` nggak punya "Tolak" | Dibenerin — "Upload ulang". |
+| 4 | Simpan hasil OCR + flag match | Ya (`amount`, `ocrMatched`). |
+| 5 | Model OCR | Default `claude-sonnet-5`, override via secret. |
+| 6 | Cicilan+split: `responsible` ∈ `splitMembers` | Benar, dijaga constraint DB. |
+
+Brief **poin 8** (gold muted `#D6AE52`) **tidak** diterapkan — di-override rebrand
+kuning, dikonfirmasi user tetap kuning terang.
+
+---
+
+## 5. Cara jalanin project dari awal
+
+### Prasyarat
+- Node 20+ (repo ini pakai **24.21.0** via nvm di WSL).
+- (Backend) Supabase CLI: `npm i -g supabase`.
+- (Dev build / store) EAS CLI: `npm i -g eas-cli` + akun Apple / Google.
+
+### Frontend (dev, cukup buat lihat app jalan)
 
 ```bash
-npm test         # unit test domain (tsx --test)
-npm run typecheck  # tsc app + tsc config test
-npm start        # expo dev server (butuh .env terisi)
+git clone <repo> kongsi && cd kongsi
+npm install
+
+cp .env.example .env
+# isi EXPO_PUBLIC_SUPABASE_URL + EXPO_PUBLIC_SUPABASE_ANON_KEY
+# (Dashboard Supabase -> Project Settings -> API). Lihat docs/SUPABASE_SETUP.md.
+
+npm run typecheck        # tsc app + tsc config test — harus bersih
+npm test                 # 58 domain test (tsx --test)
+npm run test:render      # 11 render smoke test (jest-expo)
+
+npm start                # Expo dev server
+# tekan 's' -> buka di Expo Go (SDK 57) di HP, atau:
+npx expo start --tunnel  # kalau HP beda jaringan
 ```
 
-> Catatan lingkungan: repo ada di WSL, node dari nvm
-> (`~/.nvm/versions/node/v24.21.0/bin`). Helper `.dev/*.sh` (gitignored) cuma
-> buat nambahin PATH itu.
+Semua fitur jalan di **Expo Go** kecuali **push notification** (butuh dev build).
 
-## Langkah berikutnya
+### Backend (kalau bikin project Supabase baru — yang sekarang sudah LIVE)
 
-Semua item brief + penambahan (OCR anti-fraud, push, realtime, light mode,
-hardening, gold accent, auto-kapital, keyboard "Selesai", undangan anggota,
-badge Lanjutkan, Nomor HP + kode negara, i18n id/en) sudah kelar. Sisanya:
+```bash
+supabase login
+supabase link --project-ref <ref>
+supabase db push                                 # apply 8 migrasi
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase functions deploy read-proof
+supabase functions deploy notify-proof
+supabase functions deploy delete-account
+```
 
-1. **Top-up kredit Anthropic** — function jalan tapi API balikin "credit
-   balance too low". Sampai di-isi, upload bukti masuk `review` (nggak
-   auto-`paid`). Semua alur status lain jalan tanpa OCR.
-2. **Dev build buat push** — `eas init` + `eas build --profile development`
-   (lihat `docs/PUSH_SETUP.md`). Kode push sudah ada, no-op tanpa `projectId`.
-3. **Email OTP template** — pastiin `{{ .Token }}` (atau matiin "Confirm
-   email" buat dev). Lihat `docs/SUPABASE_SETUP.md`.
-4. Polish gaya iOS dari prototipe (spacing, animasi, salin kode grup, custom
-   date-picker popup, empty states).
-5. Resize gambar bukti sebelum upload (`expo-image-manipulator`).
-6. Deep-link dari notif ke layar grup (`data.groupId` udah dikirim).
+Lalu setel Auth di dashboard (Confirm email, template OTP `{{ .Token }}`,
+Redirect URLs `billsapp://`). Detail lengkap: `docs/SUPABASE_SETUP.md`.
 
-Yang ditunda (brief): WhatsApp API asli, lunasi-dipercepat untuk split,
-fitur agentic.
+### Production build
 
-### Catatan / utang teknis
+```bash
+eas init                 # bikin extra.eas.projectId di app.json
+eas build:configure
+eas build --profile production --platform ios       # butuh Apple Developer
+eas build --profile production --platform android   # butuh Play Console
+```
 
-- Akun Anthropic $0 credit → OCR error sampai di-top-up. Key + model keset
-  sebagai Supabase secret.
-- Push: butuh dev build + EAS `projectId`; no-op sampai itu ada.
-- Notif client-driven (abis `submitProof`) — DB trigger + `pg_net` lebih
-  tahan banting.
-- "Member lain yang relevan" belum di-fan-out — cuma PJ.
-- Gambar bukti belum di-resize (cuma `quality: 0.6` di picker).
-- i18n: nama kategori tagihan tetap Indonesia (DB enum); body push notif
-  (`notify-proof`) tetap Indonesia — belum ikut locale user.
-- `@types/node`/`node --test` warning `MODULE_TYPELESS_PACKAGE_JSON` — kosmetik.
-- Migrasi lokal diedit in-place beberapa kali; `supabase db reset` bakal
-  replay bener. Fungsi/skema di DB live udah sinkron.
+Sebelum submit: ganti `CONTACT_EMAIL` di `src/features/legal/content.ts` ke email
+yang beneran dipantau (dan host teksnya di URL publik kalau store minta link).
+
+> Lingkungan repo: node dari nvm (`~/.nvm/versions/node/v24.21.0/bin`). Helper
+> `.dev/*.sh` (gitignored) cuma buat nambahin PATH itu.
+
+---
+
+## 6. Utang teknis / catatan
+
+- **"Confirm email" OFF** di project live sekarang — sign up langsung dapat sesi.
+  Nyalain sebelum produksi (butuh custom SMTP, §2 #5).
+- Notif client-driven (dipanggil habis `submitProof`) — lebih tahan banting kalau
+  jadi DB trigger + `pg_net`.
+- Notif cuma ke **PJ**, belum fan-out ke anggota split lain.
+- Body push notif (`notify-proof`) & nama kategori tagihan (DB enum) tetap
+  Indonesia — belum ikut locale user.
+- Gambar bukti belum di-resize sebelum upload (cuma `quality: 0.6` di picker) —
+  kandidat `expo-image-manipulator`.
+- Belum ada deep-link dari notif ke layar grup (`data.groupId` sudah dikirim).
+- Beberapa dependency dari template `create-expo-app` (`@expo/ui`,
+  `expo-glass-effect`, `expo-symbols`, `react-native-reanimated`) belum dipakai
+  di `src/` — bisa di-prune.
+- Migrasi lokal pernah diedit in-place; `supabase db reset` tetap replay benar,
+  skema live sudah sinkron.
